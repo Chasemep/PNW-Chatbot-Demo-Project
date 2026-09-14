@@ -1,0 +1,206 @@
+I am building a chatbot for Purdue University that can answer questions about the university's programs, admissions, campus life, and other related topics. The chatbot will be designed to provide accurate and helpful information to prospective students, current students, faculty, and staff. It will be able to handle a wide range of queries and provide responses in a conversational manner.
+
+#Stakeholder interview notes:
+Below is data from the deans office who sponsored the project.
+
+PNW Dean of Students Office Director Verbal Explanation
+Students have trouble finding answers to common university questions. Information is spread across different webpages and policy documents, and our staff spend a lot of time answering repetitive questions. We would like some kind of chatbot that students can use to get answers. 
+Jane is our student service coordinator. Jane, could you please explain the details?
+
+Jane’s Verbal Explanation
+Sure. Most questions are about things like adding or dropping classes, academic standing, grade appeals, financial aid deadlines, registration, and who students should contact. A big concern is that we cannot have the chatbot give students incorrect policy information. 
+
+
+
+
+#Student interview notes:
+Below is notes from students who were interviewed.
+
+https://www.pnw.edu/getting-to-pnw/parking-and-fees/regulations-and-enforcement/
+https://catalog.pnw.edu/preview_program.php?catoid=5&poid=1338&returnto=271
+https://www.pnw.edu/registrar/academic-schedule/
+Multi-Level Links & Nested Pages (Parking Document) The main parking page does not provide all the steps to pay a ticket or file an appeal all in one place. It links to other pages outside of forms and the student accounts portal.
+Impact: Our chatbot can't scrape the top level URL. The ingestion tool has to follow child links and pull from attached PDFs so it gives actual answers instead of sending students through another loop of links. 
+HTML Tables (Academic Schedule): Complex HTML tables are used for multiple terms (Fall, Spring, Summer) to display deadlines, drop/add dates and refund percentages. 
+Impact: A standard text splitter will split rows and columns and scramble dates and deadlines. We need a parser that preserves table rows (e.g. Markdown tables) and has a check for current dates, so the bot doesn't quote a late deadline.  
+
+
+Fragmented Course Data & Prerequisites (Academic Catalog): The course prerequisites and semester offerings are separated into pop-ups, expandable boxes, and campus tags (Hammond vs. Westville).
+Impact: The bot needs to combine prerequisites into a single clear summary. That also includes the chatbot asking students what campus they are attending before taking questions about course availability.
+
+https://catalog.pnw.edu/content.php?catoid=4&navoid=154#admission-to-the-graduate-school
+https://www.pnw.edu/accessibility-at-purdue-university-northwest/
+https://www.pnw.edu/dean-of-students/policies/academic-integrity-policy/
+Graduates policy is fairly simple so an AI might not have too much trouble, but there are a lot of links that lead to certain parts of the document that might make it revert back to previously stated information. The second thing of note is there are a lot of designs like the star and share button that are not needed but are included in the design of the docuement policy that may affect the AI.
+
+Accessibility policies is full of links and buttons that redirect a user to information while also having images and boxes with text that are in different sections from the  main page as well as repeating links depending on where you click to access the data for more information. The site itself has little to no information unless you select the button so this might make it hard for an AI to provide the correct information.
+
+Academic Integrity policies site should be good for an AI to collect data from. It may have trouble accessing the data hidden behind the button and the table, but overall most data is in a listed format that should be easy for the Chatbot to read and record he information about Academic Integrity. 
+
+URLs:
+1.) https://www.pnw.edu/concurrent-enrollment/wp-content/uploads/sites/4/2020/02/STUDENT-HANDBOOK.pdf?utm_source=chatgpt.com
+2.) https://www.pnw.edu/faculty-senate/wp-content/uploads/sites/71/2021/01/Classroom-Behavior-Policy.pdf?utm_source=chatgpt.com
+3.) https://www.pnw.edu/information-services/policies/?utm_source=chatgpt.com
+ANALYSIS OF DOCUMENTS:
+1.) PNW Student Handbook:
+The PNW Student Handbook is a PDF document that contains information directly related to students. It includes information about student responsibilities, academic misconduct, university rules, and expected student behavior. The information is organized into different sections, which makes it easier for students to find specific topics. One benefit of this format is that most of the information is contained in one document. However, students may need to search through the PDF to find a specific rule or topic. The PDF search feature can make this process easier. The handbook also refers students to other university policies and resources, so they may sometimes need to follow a link or look at another source for more information.
+2.) Classroom behavior policy:
+The Classroom Behavior Policy is also a PDF. The information is organized using headings, definitions, and numbered sections. This makes it easier to understand the different rules and expectations. One benefit of this format is that most of the policy is contained in one document. However, someone looking for a specific rule still has to open the PDF and search through the document. Using the PDF search feature makes finding specific information easier.
+3.) Information Services Policy:
+The Information Services Policies document is an HTML webpage. Instead of putting all of the information into one PDF, the website uses webpages and links to organize the policies. This can make information easier to access because users can click on different links to find the policy they need. However, it can also make finding information more complicated because the user may have to go through multiple webpages or links before finding the exact information.
+CONCLUSION:
+The three PNW documents show how the format and organization of information can affect how easily students and users can find the information they need. The PNW Student Handbook and Classroom Behavior Policy are both PDF documents. They organize information into sections and headings, which helps users find specific topics, although they may need to search through the PDF to locate certain information. The Information Services Policies document is an HTML webpage that uses links to organize different policies. This makes it possible to navigate directly to different resources, but users may need to click through multiple pages to find specific information.
+Overall, the three documents show that different formats have different advantages and disadvantages. PDFs are useful because they keep a large amount of information together in one document, while HTML webpages can make navigation between different resources easier. The way information is organized can therefore affect how quickly and easily students can access the policies and information they need.
+
+
+#Initial corpus review:
+Below are the initial reviews from some university policies.
+
+Think about the last time you had a question about a university policy, rule, deadline, or process. What was the question?
+How do you pay parking tickets?
+ 
+How did you try to find the answer?
+Google search, then My PNW website, then finally ended up on PNW rules page.
+ 
+What did you try first? 
+Google
+ 
+Were you able to find the answer? What was difficult or frustrating?  
+No, did not find answer, it was very difficult and frustrating.
+ 
+Did you ever find multiple answers or information that seemed inconsistent or outdated? What did you do?
+Little or no information was found, searched Google
+ 
+Is there anything else about finding university information that is frustrating or confusing that we haven't talked about?
+The school has multiple campuses, finding relevant information about a specific campus proved difficult. Current chatbot “Leo” just provides links, not much more.
+ 
+ 
+Interview 2
+Think about the last time you had a question about a university policy, rule, deadline, or process. What was the question?
+Does PNW offer a computer science PHD program?
+ 
+How did you try to find the answer?
+PNW website
+ 
+What did you try first? Why?
+Searched school website for program information because I figured I could easily find an answer.
+ 
+Were you able to find the answer? What was difficult or frustrating?
+No, I did not find the answer, it was difficult because search results didn’t answer my direct question, I ended up just asking my advisor.
+ 
+Did you ever find multiple answers or information that seemed inconsistent or outdated? What did you do?
+I did not see the information I needed at all
+ 
+Is there anything else about finding university information that is frustrating or confusing that we haven't talked about?
+Navigating the different colleges, (e.g. College of Engineering and Science, or College of Technology), and finding details about the programs offered at each college can be a bit confusing.
+ 
+Interview 3
+Think about the last time you had a question about a university policy, rule, deadline, or process. What was the question?
+Question about an error I received while registering for classes. How do I fix this error (included error message)?
+ 
+How did you try to find the answer?
+PNW website.
+ 
+What did you try first?
+Web searching
+ 
+Were you able to find the answer? What was difficult or frustrating?  
+Yes, through advisor. Search results only returned links to pages which did not have an answer to my question.
+ 
+Did you ever find multiple answers or information that seemed inconsistent or outdated? What did you do?
+Didn’t find much at all
+ 
+Is there anything else about finding university information that is frustrating or confusing that we haven't talked about?
+Finding solutions to personalized issues is always very difficult.
+
+ 1. Think about the last time you had a question about a university policy, rule, deadline, or process. What was the question?
+Ans:
+ Last time I had a question about a university process, I wanted to know how to submit my plan of study for my master's in computer science at Purdue University Northwest. I was unsure about which courses I needed to include, whether I needed approval from my advisor, and when I had to submit the plan.
+2. How did you try to find the answer?
+Ans:
+ I first checked the Purdue University Northwest website and looked for information about graduate student requirements and the plan of study. I also checked my student portal to see whether there were any instructions or forms available.
+Page 2
+3. What did you try first? Why?
+Ans:
+ I tried searching the university website first because it is the official source of information. I thought I could find the required courses, submission instructions, and deadlines there without needing to contact anyone.
+4. Were you able to find the answer? What was difficult or frustrating?
+Ans:
+ I was able to find some info, but it was difficult to understand exactly which courses I need to select for my master's in CS. I was also unsure about the approval process and whether I needed to submit the plan myself or wait for my academic advisor.
+5. Did you ever find multiple answers or info that seemed inconsistent or outdated? What did you do?
+Ans:
+ I sometimes found info on different university pages that was difficult to compare or understand. When this happened, I checked the most recent info available and contacted my academic advisor to confirm the correct requirements before submitting anything.
+Page 3
+6. Is there anything else about finding university info that is frustrating or confusing that we haven't talked about?
+Ans:
+ One frustrating part is that important info is sometimes spread across different university websites and departments. It would be helpful to have one central platform where students could easily find updated info about courses, graduation requirements, deadlines, and university procedures.
+
+Quiestion7: What would make it easier for you to find university information?
+Ans: I would like to have one centralized platform where students can search for university policies, deadlines, course requirements, registration information, and graduation procedures. The platform should provide simple explanations, updated information, and links to official university sources.
+Question8: Would you use a university chatbot to answer your questions? 
+Ans:Yes, I would use a university chatbot if it provided accurate and updated information. It could help students quickly find answers without searching through multiple webpages. I would also want it to provide links to official sources and direct me to the appropriate department when it cannot answer a question. 
+Question9: What is the biggest pain point in your current process? 
+Ans: The biggest pain point is that finding university information can take a lot of time, especially when the information is spread across different websites. I sometimes have to search multiple times or contact different departments to get a clear answer. Having one reliable and easy-to-use platform would make the process much easier. 
+Questiom10: What do you do when you find different or outdated information? 
+Ans: I compare the information from different university webpages and check the latest university emails or announcements. If I am still unsure, I contact my academic advisor or the appropriate department to confirm the correct information before making a decision. 
+Question11: How long does it usually take you to find an answer? 
+Ans: It depends on the question. Simple questions may take only a few minutes, but more complicated questions involving registration, academic requirements, or university policies can take much longer. Sometimes I need to check several sources or wait for a response from the university staff. 
+Question 1: When you have a question about PNW, where do you usually look first?
+Answer:
+I usually check the PNW website or my student portal first. If I can't find the information there, I usually ask my classmates or contact a professor or the appropriate department.
+Question 2: Is it easy to find the information you are looking for?
+Answer:
+Not always. Sometimes I can find it quickly, but other times I have to check different pages before I find the information I need.
+Question 3: Have you ever had to spend a lot of time trying to find an answer?
+Answer:
+Yes. Sometimes I have to search through different webpages, and if I still can't find the answer, I have to email someone and wait for a response.
+Question 4: What do you think would make this process easier?
+Answer:
+I think having one place where students can ask university-related questions and get clear answers would make it much easier.
+——————————————————————————————————————————
+## Interview 2
+Question 1: When you have a question about PNW, where do you usually look first?
+Answer:
+I usually search on the PNW website first. If I can't find the information, I ask my classmates, professor, advisor, or the university department related to my question.
+ Question 2: Is it easy to find the information you are looking for?
+Answer:
+Sometimes it is easy, but sometimes it is difficult to find the exact information I need. I may have to look through several pages to find the right information.
+Question 3: Have you ever had to spend a lot of time trying to find an answer?
+Answer:
+Yes, sometimes. If the information is not available on the website, I may have to contact someone by email and wait for their response.
+Question 4: What do you think would make this process easier?
+Answer:
+It would be helpful to have one place where students can ask questions and get quick and clear answers instead of searching through different pages.
+Main Pain Points Identified
+Based on both interviews, we found the following problems:
+* It can be difficult to find specific information on the PNW website.
+* Students sometimes have to check multiple webpages.
+* It is not always clear which department to contact.
+* Finding an answer can take time.
+* Students may have to wait for an email response.
+* Asking classmates or other people is sometimes necessary when the information is difficult to find.
+Conclusion
+Both interviews showed that students mainly use the PNW website, student portal, professors, advisors, university departments, and classmates to get answers to university-related questions. A centralized place for students to ask questions and receive clear information could make the process faster and easier.
+When was the last time you had a question about a university process?
+Looking at the graduation application, Had to Look at my pnw then Looked at the email, or message the advisor.
+were you able to find the answers?
+it was a little annoying to find the answers, it wasn't to bad though.
+how were you able to figure it out?
+the email linked to the website which linked to a website that lead to PNW, multiple steps that lead to the right spot.
+did you ever find multiple answers?
+there is not a lot of conflicting stuff they are hidden under multiple links. they had to bookmark some of the web browsers. A lot of answers were also outdated.
+is there anything frustrating they haven't talked about?
+The Tasks in my PNW does not always update correctly.
+Was there outdated information?
+There does seem to be outdated information that was covered as correct information. Hiding the proper solution needed.
+What is your experience with course applications?
+For the most part they ask their advisor, however this was sometimes difficult especially since they consistently had new advisors. Requires a pin for the scheduling that is inconsistent.
+Outside the advisor is it hard to find information of what you need?
+It isn’t to hard to find stuff without the advisor. It could use a graph of the pre-requistes record for a class.
+
+Is it hard to find the pre-requisites?
+You need to look multiple classes deep to find your courses. Finding information about a class can be very problematic.
+
+People are taking an extra semester do you think that is a scheduling mishap?
+There has been issues where the information given has been incorrect, they have been given false information about the courses needed to graduate. They were un-aware that this course was required.
+Is the chatbot supposed to be basic information or to help scheduling?
+It should probably just support general information, but future scenarios. Changing the room can happen suddenly.
