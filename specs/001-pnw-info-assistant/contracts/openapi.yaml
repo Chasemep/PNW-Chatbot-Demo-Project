@@ -1,0 +1,390 @@
+openapi: 3.1.0
+info:
+  title: PNW Student Information & Advising Assistant API
+  version: 1.0.0
+  description: >
+    Stateless REST API for the PNW Student Information & Advising Assistant.
+    Enforces Constitution Principle I (Grounded Answers with citations)
+    and Constitution Principle II (Fail Safely with departmental routing).
+
+paths:
+  /api/v1/query:
+    post:
+      summary: Submit a single-turn student inquiry
+      description: >
+        Processes a student question statelessly with in-flight PII redaction.
+        Retrieves official PNW policy/schedule/prerequisite data and returns a
+        grounded response with verified citations or a fail-safe advisor routing card.
+      operationId: submitQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Successful query response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          description: Empty or malformed query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal processing failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/feedback:
+    post:
+      summary: Submit anonymous response feedback
+      description: Captures thumbs up/down and optional issue reports to audit answer accuracy and link health (FR-012, SC-007).
+      operationId: submitFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '201':
+          description: Feedback recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackResponse'
+        '404':
+          description: Query ID not found
+
+  /api/v1/courses/{course_code}/prerequisites:
+    get:
+      summary: Retrieve full progressive course prerequisite chain
+      description: Returns hierarchical prerequisite tree with minimum grade cutoffs and AND/OR branches (FR-005).
+      operationId: getCoursePrerequisites
+      parameters:
+        - name: course_code
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "CS 30200"
+      responses:
+        '200':
+          description: Prerequisite hierarchy tree
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrerequisiteHierarchy'
+        '404':
+          description: Course not found in catalog
+
+  /api/v1/terms/active:
+    get:
+      summary: Get active and upcoming academic calendar terms
+      description: Returns dates, drop cutoffs, and refund schedules for active and upcoming terms (FR-003).
+      operationId: getActiveTerms
+      responses:
+        '200':
+          description: Active and upcoming terms
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TermsResponse'
+
+  /api/v1/health:
+    get:
+      summary: Service health check
+      operationId: checkHealth
+      responses:
+        '200':
+          description: Service and database status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  database:
+                    type: string
+                    example: "connected"
+                  pgvector_enabled:
+                    type: boolean
+                    example: true
+
+components:
+  schemas:
+    QueryRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          minLength: 2
+          maxLength: 1000
+          example: "How do I pay a parking citation?"
+        campus_preference:
+          type: string
+          enum: [HAMMOND, WESTVILLE, ALL]
+          default: ALL
+
+    QueryResponse:
+      type: object
+      required:
+        - query_id
+        - answer
+        - outcome
+        - citations
+        - pii_detected
+      properties:
+        query_id:
+          type: string
+          format: uuid
+        answer:
+          type: string
+          description: Grounded Markdown answer with step-by-step guidance
+        outcome:
+          type: string
+          enum: [GROUNDED_ANSWER, FAIL_SAFE_ROUTED, OUT_OF_SCOPE]
+        applied_term:
+          type: string
+          nullable: true
+          example: "Fall 2026 Full Term"
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+        prerequisite_hierarchy:
+          $ref: '#/components/schemas/PrerequisiteHierarchy'
+          nullable: true
+        department_contact:
+          $ref: '#/components/schemas/DepartmentContact'
+          nullable: true
+        pii_detected:
+          type: boolean
+          description: True if student ID/PII was detected and redacted
+        privacy_notice:
+          type: string
+          nullable: true
+          example: "Notice: Student ID was detected and redacted. Do not submit private IDs."
+
+    Citation:
+      type: object
+      required:
+        - title
+        - source_url
+        - campus_scope
+      properties:
+        title:
+          type: string
+          example: "PNW Parking Regulations & Citations"
+        source_url:
+          type: string
+          format: uri
+          example: "https://www.pnw.edu/police/parking/"
+        section_heading:
+          type: string
+          nullable: true
+          example: "Citation Payment and Appeals Process"
+        campus_scope:
+          type: string
+          enum: [HAMMOND, WESTVILLE, ALL]
+
+    DepartmentContact:
+      type: object
+      required:
+        - office_name
+        - contact_email
+        - phone_number
+        - building_room
+        - website_url
+      properties:
+        office_name:
+          type: string
+          example: "Office of the Dean of Students"
+        contact_email:
+          type: string
+          format: email
+          example: "dos@pnw.edu"
+        phone_number:
+          type: string
+          example: "(219) 989-2367"
+        campus:
+          type: string
+          enum: [HAMMOND, WESTVILLE, ALL]
+        building_room:
+          type: string
+          example: "Student Union & Library Building, Room 313"
+        website_url:
+          type: string
+          format: uri
+          example: "https://www.pnw.edu/dean-of-students/"
+        office_hours:
+          type: string
+          nullable: true
+          example: "Mon-Fri 8:00 AM - 4:30 PM"
+
+    PrerequisiteHierarchy:
+      type: object
+      required:
+        - course_code
+        - title
+        - credits
+        - prerequisite_groups
+      properties:
+        course_code:
+          type: string
+          example: "CS 30200"
+        title:
+          type: string
+          example: "Data Structures"
+        credits:
+          type: integer
+          example: 3
+        prerequisite_groups:
+          type: array
+          description: List of prerequisite groups combined with AND logic
+          items:
+            $ref: '#/components/schemas/PrerequisiteGroup'
+
+    PrerequisiteGroup:
+      type: object
+      required:
+        - group_id
+        - logic_operator
+        - options
+      properties:
+        group_id:
+          type: integer
+          example: 1
+        logic_operator:
+          type: string
+          enum: [AND, OR]
+          example: "OR"
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrerequisiteCourse'
+
+    PrerequisiteCourse:
+      type: object
+      required:
+        - course_code
+        - title
+        - min_grade
+        - is_corequisite
+      properties:
+        course_code:
+          type: string
+          example: "CS 27500"
+        title:
+          type: string
+          example: "Computer Architecture"
+        min_grade:
+          type: string
+          example: "C"
+        is_corequisite:
+          type: boolean
+          example: false
+        sub_prerequisites:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrerequisiteCourse'
+          nullable: true
+
+    FeedbackRequest:
+      type: object
+      required:
+        - query_id
+        - sentiment
+      properties:
+        query_id:
+          type: string
+          format: uuid
+        sentiment:
+          type: string
+          enum: [HELPFUL, UNHELPFUL]
+        issue_category:
+          type: string
+          enum: [OUTDATED_INFO, BROKEN_LINK, INCORRECT_RULE, OTHER]
+          nullable: true
+        comment:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    FeedbackResponse:
+      type: object
+      required:
+        - status
+        - feedback_id
+      properties:
+        status:
+          type: string
+          example: "received"
+        feedback_id:
+          type: string
+          format: uuid
+
+    TermsResponse:
+      type: object
+      required:
+        - active_term
+        - upcoming_term
+      properties:
+        active_term:
+          $ref: '#/components/schemas/AcademicTerm'
+        upcoming_term:
+          $ref: '#/components/schemas/AcademicTerm'
+          nullable: true
+
+    AcademicTerm:
+      type: object
+      required:
+        - term_code
+        - name
+        - start_date
+        - end_date
+        - drop_100_refund_deadline
+        - withdraw_deadline
+      properties:
+        term_code:
+          type: string
+          example: "FALL_2026"
+        name:
+          type: string
+          example: "Fall 2026 Full Term"
+        start_date:
+          type: string
+          format: date
+          example: "2026-08-24"
+        end_date:
+          type: string
+          format: date
+          example: "2026-12-12"
+        drop_100_refund_deadline:
+          type: string
+          format: date
+          example: "2026-09-07"
+        withdraw_deadline:
+          type: string
+          format: date
+          example: "2026-10-26"
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          example: "Invalid query text"
