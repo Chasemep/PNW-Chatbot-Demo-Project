@@ -71,49 +71,11 @@ The system follows a containerized 3-tier architecture adhering to Constitution 
 ### Architectural Component Diagram
 
 ```mermaid
-flowchart TD
-    subgraph Client["Client Browser - React SPA"]
-        UI_Input["InquiryInput Component"]
-        UI_Answer["AnswerCard and PrerequisiteTree"]
-        UI_Feedback["InlineFeedbackWidget"]
-        UI_Banner["PrivacyAlertBanner"]
-    end
-
-    subgraph DockerBackend["FastAPI Backend Container"]
-        APIRouter["FastAPI REST Router"]
-        PII["PII Redactor Middleware"]
-        TermRes["Academic Term Resolver"]
-        PrereqEngine["Prerequisite Service"]
-        HybridSearch["Hybrid Search Engine"]
-        GroundingGate["Groundedness and Fail-Safe Gate"]
-        FallbackRouter["Advisor Routing Service"]
-    end
-
-    subgraph DockerDB["PostgreSQL 16 with pgvector Container"]
-        VectorDB[("pgvector Embeddings")]
-        FullText[("Full-Text Search Index")]
-        RelationalTables[("Relational Tables")]
-    end
-
-    UI_Input -->|Submit Query| APIRouter
-    UI_Feedback -->|Submit Feedback| APIRouter
-    APIRouter --> PII
-    PII --> TermRes
-    PII --> HybridSearch
-    PII --> PrereqEngine
-    TermRes --> RelationalTables
-    PrereqEngine --> RelationalTables
-    HybridSearch --> VectorDB
-    HybridSearch --> FullText
-    HybridSearch --> GroundingGate
-    GroundingGate -->|Confidence High| APIRouter
-    GroundingGate -->|Ungrounded or Personal| FallbackRouter
-    FallbackRouter --> RelationalTables
-    FallbackRouter --> APIRouter
-    APIRouter -->|JSON Response| UI_Answer
-    APIRouter -.->|PII Detected Notice| UI_Banner
-    APIRouter -.->|Prerequisite DAG| UI_Answer
-    UI_Feedback --> RelationalTables
+flowchart LR
+    Browser["React SPA"] -->|POST /api/v1/query| Backend["FastAPI Backend"]
+    Backend -->|Hybrid Search + Gemini| DB[("PostgreSQL + pgvector")]
+    Backend -->|Grounded answer| Browser
+    Backend -->|Fail-safe referral| Browser
 ```
 
 ### Major Components & Their Interactions
@@ -147,59 +109,24 @@ The sequence diagram below details the end-to-end execution path for single-turn
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor Student as Student
-    participant UI as React SPA Frontend
+    actor Student
+    participant UI as React SPA
     participant API as FastAPI Backend
-    participant PII as PII Redactor
-    participant Term as Term Resolver
-    participant Search as Hybrid Search Engine
-    participant Gate as Groundedness Gate
-    participant DB as PostgreSQL Database
+    participant DB as PostgreSQL
 
-    Student->>UI: Enters query
+    Student->>UI: Enter query
     UI->>API: POST /api/v1/query
-    
-    activate API
-    API->>PII: Sanitize incoming prompt
-    alt Inadvertent PII Detected
-        PII-->>API: Masked text and pii_detected true
-    else Clean Query
-        PII-->>API: Original text and pii_detected false
-    end
+    API->>DB: Hybrid search (vector + keyword)
+    DB-->>API: Top context chunks
 
-    API->>Term: Resolve academic term context
-    Term->>DB: Query academic_terms by CURRENT_DATE
-    DB-->>Term: Return active or upcoming term
-    Term-->>API: Applied term context
-
-    API->>Search: Execute hybrid retrieval
-    Search->>DB: Query cosine distance and keyword rank
-    DB-->>Search: Return top context chunks
-    Search-->>API: Ranked official context chunks
-
-    API->>Gate: Evaluate groundedness confidence
-    alt High Confidence and Grounded Context
-        Gate->>API: Generate structured step-by-step response with citations
-        API->>DB: Insert query_logs outcome GROUNDED_ANSWER
-        API-->>UI: 200 OK with answer and citations
-        UI-->>Student: Displays AnswerCard with verified links
-    else Low Confidence or Personal Records
-        Gate->>DB: Query administrative_contacts directory
-        DB-->>Gate: Return official office contact info
-        Gate-->>API: Build safe referral card
-        API->>DB: Insert query_logs outcome FAIL_SAFE_ROUTED
-        API-->>UI: 200 OK with department_contact card
-        UI-->>Student: Displays AdvisorRoutingCard with contact details
-    end
-    deactivate API
-
-    opt Anonymous Feedback Submission
-        Student->>UI: Clicks Thumbs Up or Down
-        UI->>API: POST /api/v1/feedback
-        API->>DB: Insert response_feedback record
-        API-->>UI: 201 Created
-        UI-->>Student: Displays confirmation toast
+    alt Grounded answer found
+        API-->>UI: Answer with citations
+        UI-->>Student: AnswerCard
+    else Low confidence or personal record
+        API->>DB: Lookup office contact
+        DB-->>API: Contact info
+        API-->>UI: Advisor referral
+        UI-->>Student: AdvisorRoutingCard
     end
 ```
 
