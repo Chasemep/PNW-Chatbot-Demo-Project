@@ -19,8 +19,12 @@ The system couples a **FastAPI** backend with a **React** (TypeScript + Vite) fr
 **Language/Version**: Python 3.11+ (Backend), TypeScript 5.0+ / Node.js 20+ (Frontend)
 
 **Primary Dependencies**:
-- *Backend*: FastAPI, Uvicorn, SQLAlchemy (asyncpg), pgvector, Pydantic v2, Alembic, httpx, sentence-transformers
+- *Backend*: FastAPI, Uvicorn, SQLAlchemy (asyncpg), pgvector, Pydantic v2, Alembic, httpx, `google-genai` (Google Gemini SDK)
 - *Frontend*: React 18, Vite, TypeScript, Lucide React, Tailwind CSS
+
+**LLM & Embedding Models (Free Tier)**:
+- *Generation Model*: **Google Gemini 1.5 Flash** (`gemini-1.5-flash`) via the Google AI Studio free tier (generous 15 RPM, 1M TPM, 1,500 RPD free tier without billing requirements).
+- *Embedding Model*: **Google `text-embedding-004`** (768 dimensions, native pgvector integration) with local HuggingFace `sentence-transformers/all-MiniLM-L6-v2` offline fallback.
 
 **Storage**: PostgreSQL 16 with `pgvector` extension (`pgvector/pgvector:pg16` Docker image); relational tables for documents, chunks, terms, courses, prerequisites, contacts, query traces, and feedback.
 
@@ -60,6 +64,147 @@ The system couples a **FastAPI** backend with a **React** (TypeScript + Vite) fr
 
 ---
 
+## System Architecture & Component Interactions
+
+The system follows a containerized 3-tier architecture adhering to Constitution Principles I (*Grounded Answers*) and II (*Fail Safely*). All client interactions are single-turn and stateless.
+
+### Architectural Component Diagram
+
+```mermaid
+flowchart TD
+    subgraph Client["Client Browser - React SPA"]
+        UI_Input["InquiryInput Component"]
+        UI_Answer["AnswerCard and PrerequisiteTree"]
+        UI_Feedback["InlineFeedbackWidget"]
+        UI_Banner["PrivacyAlertBanner"]
+    end
+
+    subgraph DockerBackend["FastAPI Backend Container"]
+        APIRouter["FastAPI REST Router"]
+        PII["PII Redactor Middleware"]
+        TermRes["Academic Term Resolver"]
+        PrereqEngine["Prerequisite Service"]
+        HybridSearch["Hybrid Search Engine"]
+        GroundingGate["Groundedness and Fail-Safe Gate"]
+        FallbackRouter["Advisor Routing Service"]
+    end
+
+    subgraph DockerDB["PostgreSQL 16 with pgvector Container"]
+        VectorDB[("pgvector Embeddings")]
+        FullText[("Full-Text Search Index")]
+        RelationalTables[("Relational Tables")]
+    end
+
+    UI_Input -->|Submit Query| APIRouter
+    UI_Feedback -->|Submit Feedback| APIRouter
+    APIRouter --> PII
+    PII --> TermRes
+    PII --> HybridSearch
+    PII --> PrereqEngine
+    TermRes --> RelationalTables
+    PrereqEngine --> RelationalTables
+    HybridSearch --> VectorDB
+    HybridSearch --> FullText
+    HybridSearch --> GroundingGate
+    GroundingGate -->|Confidence High| APIRouter
+    GroundingGate -->|Ungrounded or Personal| FallbackRouter
+    FallbackRouter --> RelationalTables
+    FallbackRouter --> APIRouter
+    APIRouter -->|JSON Response| UI_Answer
+    APIRouter -.->|PII Detected Notice| UI_Banner
+    APIRouter -.->|Prerequisite DAG| UI_Answer
+    UI_Feedback --> RelationalTables
+```
+
+### Major Components & Their Interactions
+
+1. **Frontend Presentation Layer (React + TypeScript + Vite)**:
+   - **`InquiryInput`**: Captures student queries statelessly, presenting quick-start chips for common inquiries (parking citations, prerequisite chains, drop deadlines).
+   - **`AnswerCard`**: Renders Markdown-formatted step-by-step guidance, source citations with active hyperlinks, campus applicability tags (`Hammond`, `Westville`, or `All`), and applied academic term indicators.
+   - **`PrerequisiteTree`**: Renders an interactive, progressive dependency DAG when course sequencing is requested, visibly annotating minimum letter grades (`C or higher`), concurrent corequisites, and `AND`/`OR` pathway logic.
+   - **`AdvisorRoutingCard`**: Displays verified departmental contact information (office name, email, phone, building/room, hours) whenever an inquiry cannot be grounded or requires personal account access.
+   - **`InlineFeedbackWidget`**: Collects anonymous binary ratings and optional issue reports to audit answer accuracy and link health (FR-012, SC-007).
+   - **`PrivacyAlertBanner`**: Alerts the student when personal identifiers were detected and masked in-flight.
+
+2. **API & Application Layer (FastAPI)**:
+   - **`PIIRedactor`**: In-flight regex and pattern scrubber that sanitizes 9-digit PUIDs, Social Security numbers, and contact details before vector search or persistence, setting `pii_detected=True` (FR-007).
+   - **`TermResolver`**: Compares `CURRENT_DATE` against ingested semester start/end and drop deadlines to resolve the active term (or advance to the upcoming term during breaks or post-drop cutoffs) (FR-003).
+   - **`PrerequisiteService`**: Recursively traverses `course_prerequisites` up to 5 levels deep, grouping dependencies by `group_id` and formatting them into a structured tree (FR-005).
+   - **`HybridSearchEngine`**: Executes concurrent dense vector search (`vector_cosine_ops`) and PostgreSQL full-text search (`tsvector @@ plainto_tsquery`) to ensure high recall for natural language questions and exact matching for alphanumeric course codes (e.g., `CS 30200`).
+   - **`GroundedGenerator & GroundingGate`**: Enforces Constitution Principle I by prompting Google Gemini 1.5 Flash (`gemini-1.5-flash` free tier API) with retrieved context chunks under strict system instructions to cite official source URLs. If cosine distance is >= 0.35 (insufficient grounding) or the prompt targets private records, it invokes the `FallbackRouter` directly to fail safely.
+   - **`FallbackRouter`**: Queries `administrative_contacts` to return an official office referral without guessing (Constitution Principle II).
+
+3. **Storage Layer (PostgreSQL 16 with `pgvector`)**:
+   - Stores vectorized document chunks with `ivfflat` indexing for semantic search.
+   - Stores GIN indexes on `tsv` generated columns for keyword lookup.
+   - Houses relational tables for `academic_terms`, `courses`, `course_prerequisites`, `administrative_contacts`, `query_logs`, and `response_feedback`.
+
+---
+
+## Request Flow
+
+The sequence diagram below details the end-to-end execution path for single-turn student inquiries, demonstrating how in-flight PII redaction, hybrid retrieval, confidence gating, and fail-safe routing interact:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Student as Student
+    participant UI as React SPA Frontend
+    participant API as FastAPI Backend
+    participant PII as PII Redactor
+    participant Term as Term Resolver
+    participant Search as Hybrid Search Engine
+    participant Gate as Groundedness Gate
+    participant DB as PostgreSQL Database
+
+    Student->>UI: Enters query
+    UI->>API: POST /api/v1/query
+    
+    activate API
+    API->>PII: Sanitize incoming prompt
+    alt Inadvertent PII Detected
+        PII-->>API: Masked text and pii_detected true
+    else Clean Query
+        PII-->>API: Original text and pii_detected false
+    end
+
+    API->>Term: Resolve academic term context
+    Term->>DB: Query academic_terms by CURRENT_DATE
+    DB-->>Term: Return active or upcoming term
+    Term-->>API: Applied term context
+
+    API->>Search: Execute hybrid retrieval
+    Search->>DB: Query cosine distance and keyword rank
+    DB-->>Search: Return top context chunks
+    Search-->>API: Ranked official context chunks
+
+    API->>Gate: Evaluate groundedness confidence
+    alt High Confidence and Grounded Context
+        Gate->>API: Generate structured step-by-step response with citations
+        API->>DB: Insert query_logs outcome GROUNDED_ANSWER
+        API-->>UI: 200 OK with answer and citations
+        UI-->>Student: Displays AnswerCard with verified links
+    else Low Confidence or Personal Records
+        Gate->>DB: Query administrative_contacts directory
+        DB-->>Gate: Return official office contact info
+        Gate-->>API: Build safe referral card
+        API->>DB: Insert query_logs outcome FAIL_SAFE_ROUTED
+        API-->>UI: 200 OK with department_contact card
+        UI-->>Student: Displays AdvisorRoutingCard with contact details
+    end
+    deactivate API
+
+    opt Anonymous Feedback Submission
+        Student->>UI: Clicks Thumbs Up or Down
+        UI->>API: POST /api/v1/feedback
+        API->>DB: Insert response_feedback record
+        API-->>UI: 201 Created
+        UI-->>Student: Displays confirmation toast
+    end
+```
+
+---
+
 ## Project Structure
 
 ### Documentation (this feature)
@@ -71,7 +216,7 @@ specs/001-pnw-info-assistant/
 ├── data-model.md        # Phase 1: Database entities, relational schema, and vector indexes
 ├── quickstart.md        # Phase 1: Runnable Docker Compose instructions and validation scenarios
 ├── contracts/           # Phase 1: Formal API & UI component specifications
-│   ├── openapi.yaml     # REST API endpoints (OpenAPI 3.1)
+│   ├── api-contracts.md # REST API endpoint contracts
 │   └── ui-contracts.md  # React component interfaces and layout hierarchy
 └── tasks.md             # Phase 2: Actionable tasks generated by /speckit-tasks
 ```

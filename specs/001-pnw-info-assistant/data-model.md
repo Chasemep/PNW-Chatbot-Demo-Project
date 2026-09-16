@@ -10,26 +10,66 @@ The database uses **PostgreSQL 16** with the **`pgvector`** extension. The schem
 1. **Semantic & Full-Text Search**: Ingested policy documents, regulations, handbooks, and PDF chunks with dense vector embeddings (`vector(1536)` / `vector(768)`) and GIN-indexed full-text vectors (`tsvector`).
 2. **Deterministic Relational Knowledge**: Academic terms, multi-subterm refund schedules, course prerequisite dependency graphs, administrative office contact directories, and anonymous feedback logs.
 
-```
- +------------------------+         +--------------------------+
- |       documents        | 1 --- * |     document_chunks      |
- | (title, url, campus)   |         | (text, embedding, tsv)   |
- +------------------------+         +--------------------------+
- 
- +------------------------+         +--------------------------+
- |        courses         | 1 --- * |   course_prerequisites   |
- | (code, title, campus)  |         | (min_grade, coreq, AND/OR) |
- +------------------------+         +--------------------------+
- 
- +------------------------+         +--------------------------+
- |   academic_terms       |         | administrative_contacts  |
- | (dates, drop cutoffs)  |         | (offices, phones, emails)|
- +------------------------+         +--------------------------+
- 
- +------------------------+         +--------------------------+
- |       query_logs       | 1 --- * |    response_feedback     |
- | (redacted_query, pii)  |         | (sentiment, issue report)|
- +------------------------+         +--------------------------+
+```mermaid
+erDiagram
+    DOCUMENTS ||--o{ DOCUMENT_CHUNKS : contains
+    DOCUMENTS {
+        uuid id PK
+        varchar title
+        text source_url
+        varchar doc_type
+        varchar campus_scope
+    }
+    DOCUMENT_CHUNKS {
+        uuid id PK
+        uuid document_id FK
+        text content
+        vector embedding
+        tsvector tsv
+    }
+    COURSES ||--o{ COURSE_PREREQUISITES : "target course"
+    COURSES ||--o{ COURSE_PREREQUISITES : "prerequisite course"
+    COURSES {
+        uuid id PK
+        varchar course_code UK
+        varchar title
+        int credits
+    }
+    COURSE_PREREQUISITES {
+        uuid id PK
+        uuid target_course_id FK
+        uuid prereq_course_id FK
+        varchar min_grade
+        boolean is_corequisite
+        varchar logic_operator
+    }
+    QUERY_LOGS ||--o{ RESPONSE_FEEDBACK : receives
+    QUERY_LOGS {
+        uuid id PK
+        text sanitized_query
+        boolean pii_detected
+        varchar outcome
+    }
+    RESPONSE_FEEDBACK {
+        uuid id PK
+        uuid query_id FK
+        varchar sentiment
+        varchar issue_category
+    }
+    ACADEMIC_TERMS {
+        varchar term_code PK
+        varchar name
+        date start_date
+        date drop_100_refund_deadline
+        date end_date
+    }
+    ADMINISTRATIVE_CONTACTS {
+        uuid id PK
+        varchar office_name UK
+        varchar contact_email
+        varchar phone_number
+        varchar building_room
+    }
 ```
 
 ---

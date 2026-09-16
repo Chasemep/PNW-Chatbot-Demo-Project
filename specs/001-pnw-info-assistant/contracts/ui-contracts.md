@@ -9,37 +9,26 @@
 The frontend is a single-turn, accessible React application optimized for desktop and mobile web browsers.
 No user authentication is required. The UI layout consists of:
 
-```text
-+-------------------------------------------------------------+
-|  PNW Student Information & Advising Assistant (Header)     |
-+-------------------------------------------------------------+
-|                                                             |
-|  [ Search / Inquiry Input Box: "Ask a PNW policy question" ] |
-|  [ Suggested Queries: "Pay parking ticket" | "CS 30200" ]   |
-|                                                             |
-+-------------------------------------------------------------+
-|  [ Privacy Banner: "PUID was detected & redacted" ]         | (Conditional)
-+-------------------------------------------------------------+
-|  [ Answer Container ]                                       |
-|    - Verified Answer Markdown Body                          |
-|    - Applied Academic Term Badge: "Fall 2026 Full Term"     |
-|    - Campus Scope Tag: "Hammond & Westville"                |
-|                                                             |
-|  [ Progressive Prerequisite Tree View ]                     | (Conditional)
-|    - Course Node (Foundational -> Intermediate -> Target)   |
-|    - Min Grade Badge: "C or higher"                         |
-|    - Corequisite Flag / OR logic branch selector            |
-|                                                             |
-|  [ Source Citations Section ]                               |
-|    - Verified University Links (Title + Link + Section)     |
-|                                                             |
-|  [ Fail-Safe Advisor Routing Card ]                         | (Conditional)
-|    - Office Name, Email, Phone, Campus Building & Room      |
-|                                                             |
-|  [ Inline Feedback Component ]                              |
-|    - Thumbs Up / Thumbs Down Buttons                        |
-|    - "Report outdated info or broken link" modal trigger    |
-+-------------------------------------------------------------+
+```mermaid
+flowchart TD
+    App["App (Main Container)"]
+    Header["Header\n(PNW Assistant Branding & Scope Notice)"]
+    InquiryInput["InquiryInput\n(Single-turn query box & suggested prompt chips)"]
+    PrivacyAlertBanner["PrivacyAlertBanner\n(Conditional: In-flight PUID/PII Redacted Notice)"]
+    AnswerCard["AnswerCard\n(Markdown body, applied term badge, campus tags)"]
+    PrerequisiteTree["PrerequisiteTree\n(Conditional: Progressive course DAG)"]
+    CitationList["CitationList\n(Verified official university hyperlinks)"]
+    AdvisorRoutingCard["AdvisorRoutingCard\n(Conditional: Fail-safe departmental referral)"]
+    InlineFeedbackWidget["InlineFeedbackWidget\n(Thumbs up/down & issue report modal)"]
+
+    App --> Header
+    App --> InquiryInput
+    App --> PrivacyAlertBanner
+    App --> AnswerCard
+    AnswerCard --> PrerequisiteTree
+    AnswerCard --> CitationList
+    AnswerCard --> AdvisorRoutingCard
+    AnswerCard --> InlineFeedbackWidget
 ```
 
 ---
@@ -51,7 +40,7 @@ Captures student single-turn queries and handles submission.
 
 ```typescript
 interface InquiryInputProps {
-  onSubmit: (query: string, campus?: 'HAMMOND' | 'WESTVILLE' | 'ALL') => void;
+  onSubmit: (query: string) => void;
   isLoading: boolean;
   disabled?: boolean;
 }
