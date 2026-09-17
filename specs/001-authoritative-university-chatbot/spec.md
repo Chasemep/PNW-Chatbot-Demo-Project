@@ -8,6 +8,14 @@
 
 **Input**: User description: Build a conversational Purdue University Northwest chatbot that answers questions about programs, admissions, campus life, policies, deadlines, registration, and related university topics using accurate, current, approved university information.
 
+## Clarifications
+
+### Session 2026-09-17
+
+- Q: Should the initial chatbot be available to anyone without signing in, or require Purdue Northwest authentication? → A: Public access without signing in.
+- Q: How should the initial release verify that time-sensitive university information is still current before using it in an answer? → A: Revalidate at ingestion and on update-date change or freshness-window expiry; disclose and escalate when freshness cannot be verified.
+- Q: What default maximum age should apply when a time-sensitive source does not provide a reliable update date? → A: Never use a time-sensitive source without a reliable update date.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Get a Verified Answer to a University Question (Priority: P1)
@@ -119,6 +127,9 @@ As a user with a personalized, ambiguous, or unsupported question, I want an hon
 - **FR-014**: The chatbot MUST prioritize Purdue University Northwest information for the initial release and MUST clearly identify when a source applies to another Purdue campus or university unit.
 - **FR-015**: The chatbot MUST allow a reviewer to determine whether each answer is supported by the cited approved source and applicable context.
 - **FR-016**: Every feature change related to this chatbot MUST have clear, reviewable, and testable requirements before implementation begins.
+- **FR-017**: The initial chatbot MUST be publicly accessible without sign-in and MUST not use authentication or private account data to answer general questions.
+- **FR-018**: The information pipeline MUST revalidate time-sensitive sources at ingestion and when a source update date changes or its configured freshness window expires; if freshness cannot be verified, the chatbot MUST disclose the limitation and escalate rather than present the information as current.
+- **FR-019**: The chatbot MUST NOT present time-sensitive information as current unless the source has a reliable update date; undated deadline and schedule sources MUST be escalated instead of used as current.
 
 ### Key Entities
 
@@ -146,8 +157,11 @@ As a user with a personalized, ambiguous, or unsupported question, I want an hon
 - The initial release covers Purdue University Northwest, including Hammond and Westville, rather than every Purdue campus.
 - Official PNW webpages, catalogs, schedules, policy repositories, handbooks, and authorized PDFs are the initial approved information scope.
 - The chatbot provides information and navigation support; it does not replace advisors, registrars, financial-aid staff, admissions staff, instructors, or official decision processes.
+- The initial chatbot is publicly accessible without sign-in and does not access private student records or account data.
 - The chatbot does not access private student records or make individualized degree, financial-aid, disciplinary, or admissions determinations.
 - University sources may change after they are reviewed; answers must disclose source dates or verification limits when available.
+- Time-sensitive sources are revalidated at ingestion and when their update date changes or configured freshness windows expire; sources whose freshness cannot be verified are not presented as current.
+- Time-sensitive information without a reliable source update date is not presented as current and is escalated for confirmation.
 - Contact information and escalation destinations are included only when they can be verified from approved university sources.
 - Performance targets assume ordinary user access and do not define a particular implementation technology.
 - The supplied interview notes and URLs are research inputs; they are not authoritative policy sources by themselves.
