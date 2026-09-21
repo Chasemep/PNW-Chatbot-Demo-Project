@@ -1,8 +1,8 @@
-# Data Model: Purdue Policy Chatbot
+# Data Model: Purdue Policy Chatbot and RAG Knowledge Base
 
 ## Overview
 
-The system stores approved university source content, chunk-level retrieval units, user questions, answer events, and review records for source-quality monitoring. PostgreSQL is the primary relational store; pgvector stores chunk embeddings for retrieval.
+The system stores approved university source content, immutable source versions, preparation releases, structure-aware retrieval chunks, embeddings, user questions, answer events, and review records. PostgreSQL is the primary relational store; pgvector stores chunk embeddings for retrieval. The active release pointer is the only release eligible for current answers.
 
 ## Entity Definitions
 
@@ -28,6 +28,42 @@ The system stores approved university source content, chunk-level retrieval unit
 - `review_status` cannot be `approved` if `is_active = false`.
 - `superseded_by` is required when `review_status = superseded`.
 
+### SourceVersion
+
+| Field | Type | Description |
+|---|---|---|
+| id | UUID | Immutable fetched/imported source version |
+| source_id | UUID | Foreign key to ApprovedSource |
+| content_hash | string | SHA-256 hash of source bytes or canonical fetched content |
+| fetched_at | timestamp | Time content was fetched/imported |
+| parser_name | string | Parser and version used |
+| parse_status | enum | succeeded, failed, incomplete |
+| byte_size | integer | Input size |
+| original_location | string | URL or file path used for preparation |
+
+**Validation rules**:
+- The same source version content hash is idempotent within a preparation release.
+- `parse_status = succeeded` is required before chunks can be embedded.
+- A version with failed or incomplete parsing cannot be used for authoritative retrieval.
+
+### KnowledgeBaseRelease
+
+| Field | Type | Description |
+|---|---|---|
+| id | UUID | Preparation run/release identifier |
+| status | enum | preparing, validated, active, rejected, retired |
+| embedding_model | string | Pinned embedding model/configuration |
+| embedding_dimension | integer | Expected vector dimension |
+| started_at | timestamp | Preparation start |
+| validated_at | timestamp | Gate completion time |
+| activated_at | timestamp | Atomic publish time |
+| failure_summary | text | Operator-visible gate failures |
+
+**Validation rules**:
+- Only one release may be `active`.
+- An active release must have passed all required validation gates.
+- A rejected release cannot be used by retrieval.
+
 ### SourceContentSegment
 
 | Field | Type | Description |
@@ -40,10 +76,18 @@ The system stores approved university source content, chunk-level retrieval unit
 | page_number | integer | Page number where available |
 | embedding | vector | pgvector embedding for semantic retrieval |
 | created_at | timestamp | Segment creation time |
+| release_id | UUID | Foreign key to KnowledgeBaseRelease |
+| structural_path | string | Heading/list/table/callout path within the source |
+| content_kind | enum | heading, paragraph, table, list, sidebar, callout, continuation |
+| location_label | string | Human-readable page/section/table location |
+| chunk_hash | string | Stable hash of normalized chunk content and context |
 
 **Validation rules**:
 - `content_text` cannot be empty.
 - `source_id` must reference an active or previously reviewed source.
+- `release_id` must reference the release that produced the chunk.
+- `embedding` must have the release's configured dimension and finite values.
+- `content_kind` and `structural_path` must be retained for citation and review.
 - If a document is marked superseded or rejected, its chunks must not be used for current answer generation without explicit review.
 
 ### StudentQuestion
@@ -121,17 +165,37 @@ The system stores approved university source content, chunk-level retrieval unit
 - A source in `pending_review` or `rejected` may not be used for authoritative answer generation.
 - Conflicting or unverified material must be flagged and excluded until reviewed.
 
+### PreparationValidation
+
+| Field | Type | Description |
+|---|---|---|
+| id | UUID | Validation result identifier |
+| release_id | UUID | Release being checked |
+| check_name | string | Named gate, such as metadata, parse, vector, or retrieval smoke test |
+| status | enum | passed, failed, warning |
+| measured_value | string | Machine-readable result or count |
+| details | text | Diagnostic information |
+| created_at | timestamp | Check time |
+
+**Validation rules**:
+- A release cannot activate with a failed required check.
+- Warnings must be visible in the release report and cannot silently change source authority.
+
 ## Relationships
 
 - `ApprovedSource` has many `SourceContentSegment` rows.
+- `ApprovedSource` has many `SourceVersion` rows.
+- `KnowledgeBaseRelease` has many `SourceContentSegment` and `PreparationValidation` rows.
 - `SourceContentSegment` belongs to one `ApprovedSource`.
 - `StudentQuestion` has one or many `GroundedAnswer` rows.
 - `GroundedAnswer` has one or many `AnswerCitation` rows.
 - `GroundedAnswer` may have zero or one `SafeReferral` row.
 - `ParsingReviewRecord` belongs to one `ApprovedSource`.
+- `SourceContentSegment` belongs to one `KnowledgeBaseRelease`.
 
 ## State transitions
 
 - `ApprovedSource`: `approved` -> `superseded` -> `inactive`
 - `ParsingReviewRecord`: `pending` -> `reviewed` -> `accepted_with_warning` or `rejected`
+- `KnowledgeBaseRelease`: `preparing` -> `validated` -> `active` -> `retired`, or `preparing` -> `rejected`
 - `GroundedAnswer`: generated -> delivered -> logged for audit review

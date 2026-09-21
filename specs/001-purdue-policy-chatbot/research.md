@@ -1,4 +1,103 @@
-# Research: Purdue Policy Chatbot Architecture
+# Research: Purdue Policy Chatbot and Vector-Database Preparation
+
+## Decision: Use `uv` as the required Python package manager
+
+**Rationale**:
+- `uv` provides project initialization, dependency resolution, lockfile generation, virtual-environment management, and command execution in one workflow.
+- `backend/pyproject.toml` and `backend/uv.lock` make backend dependencies reproducible across local development, CI, and Docker.
+- `uv sync` installs the locked environment and `uv run` ensures commands use that environment without requiring shell activation.
+
+**Alternatives considered**:
+- `pip` with `requirements.txt`: rejected because it does not provide the required project-level lock and environment workflow by itself.
+- Poetry: rejected because the project requirement explicitly mandates `uv`.
+- System Python or manually activated virtual environments: rejected because they are less reproducible and can bypass the locked dependency set.
+
+**Required conventions**:
+- Run `uv init --python 3.12` once in `backend/` when creating the project.
+- Add runtime dependencies with `uv add` and development dependencies with `uv add --dev`.
+- Commit `backend/pyproject.toml` and `backend/uv.lock`.
+- Use `uv sync` to install and `uv run ...` to execute backend commands.
+- Do not add `requirements.txt` or document `pip install` for the backend.
+
+## Decision: Use a manifest-driven, versioned batch preparation workflow
+
+**Rationale**:
+- A manifest makes approval, ownership, canonical identity, effective dates, and supersession explicit instead of inferring authority from fetched content.
+- Each run writes to a new isolated knowledge-base release. Retrieval continues using the prior active release until the new release passes all gates.
+- An atomic active-release pointer prevents mixed-version answers during refresh and supports rollback/audit.
+
+**Alternatives considered**:
+- Mutating the active chunks in place: rejected because partial refreshes could mix old and new policy content.
+- Relying on crawler discovery alone: rejected because discovered pages are not necessarily approved university sources.
+- Rebuilding and replacing the database: rejected because it is harder to audit and creates unnecessary downtime.
+
+## Decision: Parse into ordered structural blocks before chunking
+
+**Rationale**:
+- HTML, PDF, and DOC/DOCX sources need headings, tables, lists, sidebars, and callouts preserved as meaningful context.
+- A block intermediate representation allows format-specific parsers to share normalization, validation, chunking, and provenance logic.
+- Each block carries source location such as URL/section, page, table, or list position for citations and review.
+
+**Alternatives considered**:
+- Extracting plain text first: rejected because table relationships and visually separated callouts can be lost.
+- One parser for every format: rejected because PDF, DOCX, and HTML expose different layout and metadata APIs.
+- Treating each page as a chunk: rejected because page boundaries do not reliably match policy meaning.
+
+## Decision: Use deterministic bounded chunks with contextual prefixes and stable IDs
+
+**Rationale**:
+- Chunks should be small enough for retrieval but large enough to retain the governing heading and nearby qualifiers.
+- A stable ID derived from source version, structural path, and chunk ordinal makes refreshes idempotent and citations reproducible.
+- Chunking must never split table rows or list items in a way that changes their meaning; oversized blocks may be split only at safe boundaries with continuation metadata.
+
+**Alternatives considered**:
+- Fixed character windows without structure: rejected because they can separate rules from their headings or table labels.
+- Whole-document embeddings: rejected because retrieval becomes imprecise and citations become too broad.
+- Fully dynamic chunking at query time: rejected because it makes validation and reproducibility harder.
+
+## Decision: Pin embedding configuration and validate dimensions before indexing
+
+**Rationale**:
+- The embedding model name, provider, version/configuration, and vector dimension are part of the knowledge-base release metadata.
+- Every vector is checked for the configured dimension and finite numeric values before insertion.
+- A model/configuration change creates a new release and index rather than mixing incompatible vectors.
+
+**Alternatives considered**:
+- Automatically changing models during a run: rejected because it produces a non-reproducible corpus.
+- Storing vectors without model metadata: rejected because later retrieval quality and compatibility cannot be explained.
+
+## Decision: Keep failed or unreviewed source content out of authoritative retrieval
+
+**Rationale**:
+- Parser failures, inaccessible sources, conflicting metadata, and incomplete extraction are recorded as review records.
+- A release can only be activated when every included source is approved and every excluded source is explicitly reported; the prior release remains active if gates fail.
+- This directly enforces grounded answers and safe failure.
+
+**Alternatives considered**:
+- Indexing with a warning flag: rejected because retrieval could still present unverified policy as current.
+- Silently dropping failures: rejected because operators and reviewers would not know the source set was incomplete.
+
+## Decision: Use pgvector HNSW indexing after release validation
+
+**Rationale**:
+- PostgreSQL keeps source metadata, release state, citations, and vectors in one transactional system.
+- HNSW provides practical approximate nearest-neighbor retrieval for a first-release corpus and can be filtered by active release and approved status.
+- Building or refreshing the index after bulk loading avoids repeatedly maintaining it during ingestion.
+
+**Alternatives considered**:
+- Exact full-table distance scans: acceptable only for tiny fixtures; rejected for the expected corpus size.
+- A separate vector database: deferred because it adds operational and consistency complexity without a first-release need.
+
+## Decision: Validate with parser fixtures, corpus gates, and retrieval smoke questions
+
+**Rationale**:
+- Fixture documents prove that structural elements survive parsing for each supported format.
+- Release gates prove metadata, chunk, vector, and approval invariants before activation.
+- Representative questions verify that expected concepts retrieve the right source sections and that citations resolve.
+
+**Alternatives considered**:
+- Relying only on end-to-end chat tests: rejected because parser and indexing failures would be difficult to isolate.
+- Manual inspection only: rejected because refreshes must be repeatable and measurable.
 
 ## Decision: Use a FastAPI backend + React frontend + PostgreSQL with pgvector + Docker deployment
 
