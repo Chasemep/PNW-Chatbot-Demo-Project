@@ -1,0 +1,73 @@
+version: "3.9"
+
+networks:
+  pnw-assistant-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: pnw_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pnw}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pnwpass}
+      POSTGRES_DB: ${POSTGRES_DB:-pnw_assistant}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - pnw-assistant-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pnw} -d ${POSTGRES_DB:-pnw_assistant}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pnw_backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-pnw}:${POSTGRES_PASSWORD:-pnwpass}@db:5432/${POSTGRES_DB:-pnw_assistant}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-004}
+      COSINE_DISTANCE_THRESHOLD: ${COSINE_DISTANCE_THRESHOLD:-0.35}
+      FALLBACK_HF_MODEL: ${FALLBACK_HF_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - pnw-assistant-net
+    volumes:
+      - ./backend/src:/app/src:ro
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        python -m src.scripts.seed_data &&
+        uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pnw_frontend
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - pnw-assistant-net
+    restart: unless-stopped
