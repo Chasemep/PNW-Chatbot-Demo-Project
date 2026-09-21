@@ -10,6 +10,40 @@
 
 Build a public Purdue University Northwest chatbot that answers general university questions from approved, traceable, current sources. The implementation will separate deterministic source ingestion, applicability and freshness checks, hybrid retrieval, citation validation, and escalation rules from conversational answer generation. The initial delivery is a small web application with a Python API, a minimal browser client, PostgreSQL-backed source/retrieval data, and immutable source artifacts.
 
+## Architecture
+
+The system uses a public browser client and a Python API for conversational access. A separate ingestion pipeline acquires only approved PNW sources, preserves immutable artifacts, normalizes source content into citation-ready blocks, and records freshness and applicability metadata. The answer pipeline resolves missing context and safety conditions before using hybrid retrieval; generated responses are validated against retrieved evidence before being returned with citations, limitations, or escalation guidance. Reviewer endpoints expose the stored audit trail without exposing private student records.
+
+```mermaid
+flowchart LR
+    U[Public user] --> UI[React/Vite chat client]
+    UI --> API[FastAPI chat API]
+
+    API --> CTX[Context and question classifier]
+    CTX --> SAFE[Applicability, freshness, and escalation rules]
+    SAFE -->|clarification or escalation| RESP[Typed response contract]
+    SAFE --> RET[Hybrid retrieval]
+    RET --> DB[(PostgreSQL<br/>metadata, FTS, pgvector)]
+    RET --> EVID[Approved evidence blocks]
+    EVID --> GEN[Answer generation]
+    GEN --> VAL[Citation and claim validator]
+    VAL --> RESP
+    RESP --> UI
+
+    MAN[Approved-source manifest] --> ING[Ingestion worker]
+    ING --> FETCH[Fetch approved HTML, PDFs, and child sources]
+    FETCH --> ART[(Immutable artifacts)]
+    FETCH --> PARSE[Normalize text, tables, links, and catalog records]
+    PARSE --> DB
+    ING --> FRESH[Freshness and conflict checks]
+    FRESH --> DB
+
+    API --> AUDIT[Answer audit writer]
+    AUDIT --> DB
+    REVIEW[Authorized reviewer] --> RV[Reviewer traceability API]
+    RV --> DB
+```
+
 ## Technical Context
 
 <!--
