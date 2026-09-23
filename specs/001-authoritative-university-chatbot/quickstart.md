@@ -6,11 +6,22 @@ This guide validates the planned feature behavior end to end. It is intentionall
 
 - Python 3.12
 - Node.js 20 or later
-- PostgreSQL with full-text search and pgvector enabled
+- Docker Engine or Docker Desktop with Docker Compose
 - An approved-source manifest containing a small set of official PNW HTML and PDF fixtures
 - Test credentials for the selected model provider, if answer generation is enabled locally
 
 ## Setup
+
+Build and start the deployment topology with Docker Compose:
+
+```bash
+docker compose build
+docker compose up -d db api frontend ingestion
+```
+
+The Compose configuration supplies PostgreSQL with pgvector, the API, the ingestion worker, the static frontend, and persistent local artifact/database volumes. Provide model-provider credentials and other deployment values through an uncommitted environment file or deployment secret mechanism.
+
+For host-native development of only the backend and frontend, the following remains available:
 
 ```bash
 python -m venv .venv
@@ -23,6 +34,15 @@ Create a local database and configure the documented environment variables for t
 
 ## Run
 
+When using Docker Compose, the frontend and API are available at the ports defined in `docker-compose.yml`. Check service health and logs with:
+
+```bash
+docker compose ps
+docker compose logs --follow api ingestion
+```
+
+For host-native development:
+
 ```bash
 uvicorn backend.app.main:app --reload
 npm --prefix frontend run dev
@@ -32,6 +52,12 @@ Run ingestion against fixtures before starting answer tests:
 
 ```bash
 python -m backend.app.ingestion.run --manifest data/approved-sources/fixture-manifest.json
+```
+
+The equivalent containerized ingestion validation is:
+
+```bash
+docker compose run --rm ingestion --manifest data/approved-sources/fixture-manifest.json
 ```
 
 ## Validation scenarios

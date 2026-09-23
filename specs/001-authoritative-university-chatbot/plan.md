@@ -60,13 +60,15 @@ flowchart LR
 
 **Testing**: pytest unit and integration tests, API contract tests, parser fixtures, and a versioned golden evaluation set for answer and escalation behavior
 
-**Target Platform**: Containerized Linux service with a static browser frontend; local development on Windows, macOS, or Linux
+**Target Platform**: Dockerized Linux services orchestrated with Docker Compose for local development and pilot deployment; the browser frontend is served as a static container
 
 **Project Type**: Public web application with an ingestion worker and reviewer traceability endpoints
 
 **Performance Goals**: Return clarification, unsupported, and cached answers within 2 seconds at p95; return retrieval-grounded answers within 8 seconds at p95 under ordinary pilot load; complete scheduled ingestion without silently skipping failed sources
 
-**Constraints**: Public access without sign-in; no private student-record access; only approved PNW sources; no current time-sensitive answer without a reliable update date; every factual answer must retain source and applicability traceability
+**Deployment**: Docker is the deployment tool. Dockerfiles build reproducible backend and frontend images, while `docker-compose.yml` runs the API, ingestion worker, frontend, PostgreSQL with pgvector, and local immutable artifact storage. Production secrets and persistent database/artifact volumes are supplied through deployment environment configuration, not committed files.
+
+**Constraints**: Public access without sign-in; no private student-record access; only approved PNW sources; no current time-sensitive answer without a reliable update date; every factual answer must retain source and applicability traceability; containers must not bake credentials into images
 
 **Scale/Scope**: Initial pilot for Purdue University Northwest, including Hammond and Westville; tens to hundreds of approved seed sources, nested pages and PDFs, and ordinary student/faculty/staff traffic rather than enterprise-scale throughput
 
@@ -126,9 +128,13 @@ data/
 └── artifacts/
 scripts/
 └── ingest/
+Dockerfile.backend
+Dockerfile.frontend
+docker-compose.yml
+.dockerignore
 ```
 
-**Structure Decision**: Use a small monorepo with a browser client, Python backend, ingestion scripts, and test fixtures. Keep source acquisition and parsing in `backend/app/ingestion`, retrieval and answer safety in separate modules, and preserve raw source artifacts under `data/artifacts` outside application code.
+**Structure Decision**: Use a small monorepo with a browser client, Python backend, ingestion scripts, test fixtures, and Docker deployment descriptors. Keep source acquisition and parsing in `backend/app/ingestion`, retrieval and answer safety in separate modules, preserve raw source artifacts under `data/artifacts` outside application code, and use Docker Compose to connect the frontend, API, ingestion worker, and PostgreSQL services.
 
 ## Complexity Tracking
 

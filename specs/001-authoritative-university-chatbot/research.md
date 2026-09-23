@@ -41,3 +41,9 @@
 **Rationale:** The highest risks are extraction regressions, stale or conflicting sources, citation drift, and incorrect escalation. Fixtures and a versioned evaluation set directly cover those risks and map to SC-001 through SC-007.
 
 **Alternatives considered:** Manual spot checks alone do not detect regressions across source layouts or prompt changes.
+
+## Decision: Use Docker and Docker Compose as the deployment tool
+
+**Rationale:** Docker provides reproducible Linux runtime images for the Python API, ingestion worker, and static frontend across Windows, macOS, Linux, and pilot environments. Docker Compose supplies a documented local and pilot topology for the API, frontend, PostgreSQL with pgvector, artifact storage, and ingestion services without requiring host-specific dependency installation.
+
+**Alternatives considered:** Host-native installation is simpler for a single developer but creates inconsistent Python, Node, browser, and database environments. Kubernetes is deferred because the initial scope is a small pilot and does not require cluster orchestration.
