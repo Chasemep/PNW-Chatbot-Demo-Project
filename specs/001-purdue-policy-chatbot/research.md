@@ -48,7 +48,7 @@
 **Rationale**:
 - Chunks should be small enough for retrieval but large enough to retain the governing heading and nearby qualifiers.
 - A stable ID derived from source version, structural path, and chunk ordinal makes refreshes idempotent and citations reproducible.
-- Chunking must never split table rows or list items in a way that changes their meaning; oversized blocks may be split only at safe boundaries with continuation metadata.
+- Chunking must never split a table row or list item in a way that changes its meaning. Oversized tables must be split between complete rows, retaining the table heading and column context on each continuation chunk. If an individual row still exceeds the bound, it must be split only at a safe cell/continuation boundary or be flagged for review rather than silently truncated.
 
 **Alternatives considered**:
 - Fixed character windows without structure: rejected because they can separate rules from their headings or table labels.
@@ -65,6 +65,22 @@
 **Alternatives considered**:
 - Automatically changing models during a run: rejected because it produces a non-reproducible corpus.
 - Storing vectors without model metadata: rejected because later retrieval quality and compatibility cannot be explained.
+
+## Decision: Use the Google Gemini API free tier for retrieval embeddings
+
+**Rationale**:
+- The first release uses Google Gemini for both embedding generation and answer generation, keeping provider operations and credential handling consistent.
+- The Gemini embedding API avoids adding a separate embedding service or local model runtime to the first release.
+- The provider, model name, output dimension, and API configuration remain server-side and are stored as release metadata so indexed vectors remain compatible with query embeddings.
+- Free-tier quota exhaustion or provider failure aborts preparation and leaves the previous active release unchanged.
+
+**Alternatives considered**:
+- A local embedding model: rejected for the first release because it adds model distribution and runtime complexity.
+- A different hosted embedding provider: rejected because the requested first-release provider is Google Gemini free tier.
+- Unconfigured or synthetic vectors: rejected because they cannot support meaningful semantic retrieval.
+
+**Implementation constraint**:
+- A concrete Gemini embedding adapter must be implemented before non-dry-run knowledge-base preparation is complete. Its model and dimension must be pinned through backend configuration and covered by quota, provider failure, dimension, and partial-batch tests.
 
 ## Decision: Keep failed or unreviewed source content out of authoritative retrieval
 

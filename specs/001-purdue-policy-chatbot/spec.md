@@ -223,6 +223,9 @@ the response names the responsible contact based on approved source material.
   separate portal or embedded widget integration.
 - **FR-021**: For the first release, access MUST be open to students without
   Purdue Northwest sign-in; the chatbot is a public-facing informational tool.
+- **FR-022**: The source process MUST generate retrieval embeddings through the
+  Google Gemini API free tier using a server-side API key and a pinned Gemini
+  embedding model configuration.
 
 ### Key Entities
 

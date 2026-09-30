@@ -1,3 +1,5 @@
+import { ChatPage } from "../pages/ChatPage";
+
 export default function App() {
-  return <main>Purdue Policy Chatbot</main>;
+  return <ChatPage />;
 }

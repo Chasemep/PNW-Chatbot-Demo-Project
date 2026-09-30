@@ -1,0 +1,228 @@
+:root {
+  color: #20302f;
+  background: #f2efe8;
+  font-family: Georgia, "Times New Roman", serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+select,
+textarea {
+  font: inherit;
+}
+
+.chat-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 85% 10%, rgba(201, 115, 70, 0.2), transparent 28rem),
+    linear-gradient(135deg, #f2efe8 0%, #e0e8df 100%);
+}
+
+.chat-page__hero,
+.chat-page__workspace {
+  width: min(920px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.chat-page__hero {
+  padding: 96px 0 48px;
+}
+
+.chat-page__eyebrow {
+  margin: 0 0 24px;
+  color: #b35f3f;
+  font-family: "Trebuchet MS", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.chat-page h1 {
+  max-width: 700px;
+  margin: 0;
+  color: #173f3c;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  font-weight: 400;
+  line-height: 0.92;
+}
+
+.chat-page__intro {
+  max-width: 520px;
+  margin: 28px 0 0;
+  font-size: 1.2rem;
+  line-height: 1.5;
+}
+
+.chat-page__workspace {
+  padding-bottom: 80px;
+}
+
+.question-form,
+.chat-page__response {
+  border: 1px solid rgba(23, 63, 60, 0.2);
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 12px 12px 0 rgba(23, 63, 60, 0.08);
+}
+
+.question-form {
+  padding: clamp(24px, 5vw, 48px);
+}
+
+.question-form > label,
+.question-form__controls label,
+.chat-page__sources span {
+  color: #173f3c;
+  font-family: "Trebuchet MS", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.question-form textarea {
+  display: block;
+  width: 100%;
+  margin: 12px 0 24px;
+  resize: vertical;
+  border: 0;
+  border-bottom: 2px solid #173f3c;
+  background: transparent;
+  color: #20302f;
+  font-size: 1.35rem;
+  line-height: 1.4;
+  outline: none;
+}
+
+.question-form textarea:focus {
+  border-bottom-color: #b35f3f;
+}
+
+.question-form__controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.question-form__controls select {
+  min-height: 42px;
+  border: 1px solid rgba(23, 63, 60, 0.35);
+  background: #f7f4ed;
+  color: #20302f;
+}
+
+.question-form button {
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0 20px;
+  border: 0;
+  background: #b35f3f;
+  color: #fffaf2;
+  cursor: pointer;
+  font-family: "Trebuchet MS", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.question-form button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.chat-page__status,
+.chat-page__error {
+  margin: 28px 0 0;
+  font-family: "Trebuchet MS", sans-serif;
+}
+
+.chat-page__error {
+  color: #9b3f32;
+}
+
+.chat-page__response {
+  margin-top: 44px;
+  padding: clamp(24px, 5vw, 48px);
+}
+
+.chat-page__response-type {
+  margin: 0 0 18px;
+  color: #b35f3f;
+  font-family: "Trebuchet MS", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.chat-page__answer {
+  margin: 0;
+  color: #173f3c;
+  font-size: 1.55rem;
+  line-height: 1.35;
+}
+
+.chat-page__follow-up,
+.chat-page__referral {
+  margin: 24px 0 0;
+  padding-left: 18px;
+  border-left: 3px solid #b35f3f;
+  line-height: 1.5;
+}
+
+.chat-page__sources {
+  display: grid;
+  gap: 8px;
+  margin-top: 30px;
+  font-family: "Trebuchet MS", sans-serif;
+  font-size: 0.9rem;
+}
+
+.chat-page__sources a {
+  color: #245f5a;
+}
+
+.chat-page__referral-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 18px;
+  border-left: 4px solid #b35f3f;
+  background: rgba(179, 95, 63, 0.08);
+  font-family: "Trebuchet MS", sans-serif;
+}
+
+.chat-page__referral-card strong {
+  color: #9b3f32;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+}
+
+.chat-page__referral-card p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .chat-page__hero {
+    padding-top: 64px;
+  }
+
+  .question-form button {
+    width: 100%;
+    margin-left: 0;
+  }
+}

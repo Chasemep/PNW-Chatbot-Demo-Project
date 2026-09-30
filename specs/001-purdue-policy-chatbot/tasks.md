@@ -23,6 +23,7 @@ description: "Phased implementation tasks for the Purdue policy chatbot and RAG 
 - [X] T006 [P] Create service images in `docker/backend.Dockerfile` and `docker/frontend.Dockerfile`, installing and executing the backend through `uv sync` and `uv run`
 - [X] T007 Create PostgreSQL/pgvector, backend, and frontend services in `docker/docker-compose.yml`
 - [X] T008 [P] Add credential examples and exclusions in `.env.example` and `.gitignore`
+- [X] T008A [P] Load the root `.env` into the Docker backend service through `docker/docker-compose.yml` while keeping real credentials excluded from version control
 
 **Checkpoint**: The repository has buildable service skeletons and reproducible local orchestration.
 
@@ -32,16 +33,16 @@ description: "Phased implementation tasks for the Purdue policy chatbot and RAG 
 
 **Purpose**: Establish database models, migrations, configuration, and shared schemas before story implementation.
 
-- [ ] T009 Create environment configuration and structured logging in `backend/app/core/config.py` and `backend/app/core/logging.py`
-- [ ] T010 Create SQLAlchemy sessions and migration scaffolding in `backend/app/db/session.py` and `backend/app/db/migrations/`
-- [ ] T011 [P] Define shared enums, UUIDs, timestamps, and pgvector types in `backend/app/models/base.py`
-- [ ] T012 Create source and release models in `backend/app/models/source.py` with `review_status` values `approved`, `pending_review`, `rejected`, or `superseded`; require `superseded_by` for `superseded`; allow only one `active` release
-- [ ] T013 Create chunk model in `backend/app/models/source_chunk.py` requiring non-empty `content_text`, `release_id`, `structural_path`, `content_kind`, `location_label`, `chunk_hash`, and finite vectors of the configured dimension
-- [ ] T014 [P] Create question, answer, citation, and referral models in `backend/app/models/answer_log.py`
-- [ ] T015 [P] Create parsing-review and preparation-validation models in `backend/app/models/review_record.py`
-- [ ] T016 Generate database migrations for all models, foreign keys, pgvector, indexes, and active-release uniqueness in `backend/app/db/migrations/`
-- [ ] T017 Create shared schemas in `backend/app/schemas/source.py`, `backend/app/schemas/review.py`, and `backend/app/schemas/chat.py`
-- [ ] T018 [P] Add model and migration tests in `backend/tests/unit/test_models.py` and `backend/tests/integration/test_database_migrations.py`
+- [X] T009 Create environment configuration and structured logging in `backend/app/core/config.py` and `backend/app/core/logging.py`
+- [X] T010 Create SQLAlchemy sessions and migration scaffolding in `backend/app/db/session.py` and `backend/app/db/migrations/`
+- [X] T011 [P] Define shared enums, UUIDs, timestamps, and pgvector types in `backend/app/models/base.py`
+- [X] T012 Create source and release models in `backend/app/models/source.py` with `review_status` values `approved`, `pending_review`, `rejected`, or `superseded`; require `superseded_by` for `superseded`; allow only one `active` release
+- [X] T013 Create chunk model in `backend/app/models/source_chunk.py` requiring non-empty `content_text`, `release_id`, `structural_path`, `content_kind`, `location_label`, `chunk_hash`, and finite vectors of the configured dimension
+- [X] T014 [P] Create question, answer, citation, and referral models in `backend/app/models/answer_log.py`
+- [X] T015 [P] Create parsing-review and preparation-validation models in `backend/app/models/review_record.py`
+- [X] T016 Generate database migrations for all models, foreign keys, pgvector, indexes, and active-release uniqueness in `backend/app/db/migrations/`
+- [X] T017 Create shared schemas in `backend/app/schemas/source.py`, `backend/app/schemas/review.py`, and `backend/app/schemas/chat.py`
+- [X] T018 [P] Add model and migration tests in `backend/tests/unit/test_models.py` and `backend/tests/integration/test_database_migrations.py`
 
 **Checkpoint**: Persistence and configuration are ready; no story-specific work should bypass these invariants.
 
@@ -51,11 +52,11 @@ description: "Phased implementation tasks for the Purdue policy chatbot and RAG 
 
 **Purpose**: Implement the common API boundary and active-release retrieval rules.
 
-- [ ] T019 Implement database/configuration dependency wiring in `backend/app/api/deps.py`
-- [ ] T020 Implement shared error handling in `backend/app/core/errors.py` without exposing secrets or converting failures into successful answers
-- [ ] T021 Implement active-release retrieval in `backend/app/services/retrieval.py`, filtering to approved, active, non-superseded sources only
-- [ ] T022 [P] Add retrieval and schema validation tests in `backend/tests/integration/test_active_release_retrieval.py` and `backend/tests/unit/test_schemas.py`
-- [ ] T023 Register the base FastAPI app and health endpoint in `backend/app/main.py`
+- [X] T019 Implement database/configuration dependency wiring in `backend/app/api/deps.py`
+- [X] T020 Implement shared error handling in `backend/app/core/errors.py` without exposing secrets or converting failures into successful answers
+- [X] T021 Implement active-release retrieval in `backend/app/services/retrieval.py`, filtering to approved, active, non-superseded sources only
+- [X] T022 [P] Add retrieval and schema validation tests in `backend/tests/integration/test_active_release_retrieval.py` and `backend/tests/unit/test_schemas.py`
+- [X] T023 Register the base FastAPI app and health endpoint in `backend/app/main.py`
 
 **Checkpoint**: The shared runtime can validate requests and retrieve only authoritative content from the active release.
 
@@ -69,20 +70,20 @@ description: "Phased implementation tasks for the Purdue policy chatbot and RAG 
 
 ### Tests
 
-- [ ] T024 [P] [US3] Add manifest validation tests in `backend/tests/unit/ingestion/test_manifest.py`
-- [ ] T025 [P] [US3] Add HTML parser tests in `backend/tests/unit/ingestion/test_html_parser.py`
-- [ ] T026 [P] [US3] Add PDF parser tests in `backend/tests/unit/ingestion/test_pdf_parser.py`
-- [ ] T027 [P] [US3] Add DOC/DOCX parser tests in `backend/tests/unit/ingestion/test_docx_parser.py`
-- [ ] T028 [P] [US3] Add representative source fixtures in `backend/tests/fixtures/ingestion/`
+- [X] T024 [P] [US3] Add manifest validation tests in `backend/tests/unit/ingestion/test_manifest.py`
+- [X] T025 [P] [US3] Add HTML parser tests in `backend/tests/unit/ingestion/test_html_parser.py`
+- [X] T026 [P] [US3] Add PDF parser tests in `backend/tests/unit/ingestion/test_pdf_parser.py`
+- [X] T027 [P] [US3] Add DOC/DOCX parser tests in `backend/tests/unit/ingestion/test_docx_parser.py`
+- [X] T028 [P] [US3] Add representative source fixtures in `backend/tests/fixtures/ingestion/`
 
 ### Implementation
 
-- [ ] T029 [P] [US3] Implement approved-source manifest validation in `backend/app/services/ingestion/manifest.py`, requiring canonical identity, title, location, source type, issuing office, review status, effective date, and reviewed timestamp
-- [ ] T030 [P] [US3] Implement local/remote source loading, SHA-256 hashing, and immutable source versions in `backend/app/services/ingestion/loader.py`
-- [ ] T031 Implement structural block types and parser dispatch in `backend/app/services/ingestion/parser.py`
-- [ ] T032 [P] [US3] Implement HTML parsing in `backend/app/services/ingestion/html.py` for headings, paragraphs, tables, lists, sidebars, callouts, order, and locations
-- [ ] T033 [P] [US3] Implement PDF parsing in `backend/app/services/ingestion/pdf.py` with page metadata and review records for image-only or unreliable extraction
-- [ ] T034 [P] [US3] Implement DOC/DOCX parsing in `backend/app/services/ingestion/docx.py` with heading hierarchy, tables, lists, sidebars, callouts, and locations
+- [X] T029 [P] [US3] Implement approved-source manifest validation in `backend/app/services/ingestion/manifest.py`, requiring canonical identity, title, location, source type, issuing office, review status, effective date, and reviewed timestamp
+- [X] T030 [P] [US3] Implement local/remote source loading, SHA-256 hashing, and immutable source versions in `backend/app/services/ingestion/loader.py`
+- [X] T031 Implement structural block types and parser dispatch in `backend/app/services/ingestion/parser.py`
+- [X] T032 [P] [US3] Implement HTML parsing in `backend/app/services/ingestion/html.py` for headings, paragraphs, tables, lists, sidebars, callouts, order, and locations
+- [X] T033 [P] [US3] Implement PDF parsing in `backend/app/services/ingestion/pdf.py` with page metadata and review records for image-only or unreliable extraction
+- [X] T034 [P] [US3] Implement DOC/DOCX parsing in `backend/app/services/ingestion/docx.py` with heading hierarchy, tables, lists, sidebars, callouts, and locations
 
 **Checkpoint**: Approved inputs are parsed into traceable blocks; failed or incomplete sources are isolated for review.
 
@@ -96,14 +97,16 @@ description: "Phased implementation tasks for the Purdue policy chatbot and RAG 
 
 ### Tests
 
-- [ ] T035 [P] [US3] Add normalization and chunking tests in `backend/tests/unit/ingestion/test_chunking.py`
-- [ ] T036 [P] [US3] Add embedding-provider tests in `backend/tests/unit/ingestion/test_embeddings.py`
+- [X] T035 [P] [US3] Add normalization and chunking tests in `backend/tests/unit/ingestion/test_chunking.py`
+- [X] T036 [P] [US3] Add embedding-provider tests in `backend/tests/unit/ingestion/test_embeddings.py`
 
 ### Implementation
 
-- [ ] T037 [US3] Implement canonical normalization in `backend/app/services/ingestion/normalize.py`, preserving table/list relationships and rejecting empty or unverifiable content
-- [ ] T038 [US3] Implement deterministic bounded chunking in `backend/app/services/ingestion/chunk.py` with heading context, structural path, content kind, location, ordinal, and stable hash
-- [ ] T039 [US3] Implement pinned embedding generation in `backend/app/services/ingestion/embed.py`, rejecting wrong dimensions, non-finite vectors, provider changes, and partial batches
+- [X] T037 [US3] Implement canonical normalization in `backend/app/services/ingestion/normalize.py`, preserving table/list relationships and rejecting empty or unverifiable content
+- [X] T038 [US3] Implement deterministic bounded chunking in `backend/app/services/ingestion/chunk.py` with heading context, structural path, content kind, location, ordinal, and stable hash
+- [X] T038A [US3] Extend `backend/app/services/ingestion/chunk.py` and `backend/tests/unit/ingestion/test_chunking.py` to split oversized tables between complete rows, preserve heading/column context and continuation metadata, and flag individually oversized rows without truncation
+- [X] T039 [US3] Implement pinned embedding generation in `backend/app/services/ingestion/embed.py`, rejecting wrong dimensions, non-finite vectors, provider changes, and partial batches
+- [X] T039A [US3] Implement the Google Gemini free-tier embedding adapter in `backend/app/services/ingestion/gemini_embed.py` using server-side credentials, pinned model/dimension configuration, quota failure handling, and provider tests
 
 **Checkpoint**: Valid source blocks become reproducible, traceable chunks with compatible embeddings.
 
@@ -117,18 +120,18 @@ description: "Phased implementation tasks for the Purdue policy chatbot and RAG 
 
 ### Tests
 
-- [ ] T040 [P] [US3] Add release-gate tests in `backend/tests/integration/test_knowledge_base_validation.py`
-- [ ] T041 [P] [US3] Add atomic publish and rollback tests in `backend/tests/integration/test_knowledge_base_publish.py`
-- [ ] T042 [P] [US3] Add CLI contract tests in `backend/tests/contract/test_knowledge_base_cli.py` using `specs/001-purdue-policy-chatbot/contracts/knowledge-base-preparation-cli.md`
+- [X] T040 [P] [US3] Add release-gate tests in `backend/tests/integration/test_knowledge_base_validation.py`
+- [X] T041 [P] [US3] Add atomic publish and rollback tests in `backend/tests/integration/test_knowledge_base_publish.py`
+- [X] T042 [P] [US3] Add CLI contract tests in `backend/tests/contract/test_knowledge_base_cli.py` using `specs/001-purdue-policy-chatbot/contracts/knowledge-base-preparation-cli.md`
 
 ### Implementation
 
-- [ ] T043 [US3] Implement metadata, parse-completeness, duplicate/empty-chunk, approval, and vector gates in `backend/app/services/ingestion/validate.py`
-- [ ] T044 [US3] Implement HNSW pgvector index creation in `backend/app/db/migrations/` and `backend/app/services/ingestion/publish.py`
-- [ ] T045 [US3] Implement retrieval smoke questions and citation-resolution checks in `backend/app/services/ingestion/validate.py`
-- [ ] T046 [US3] Implement transactional release activation and prior-release retirement in `backend/app/services/ingestion/publish.py`
-- [ ] T047 [US3] Implement the preparation command in `backend/scripts/prepare_knowledge_base.py` with `--manifest`, `--release-label`, `--source-root`, `--dry-run`, and `--activate`
-- [ ] T048 [US3] Add preparation metrics and release diagnostics in `backend/app/services/ingestion/`
+- [X] T043 [US3] Implement metadata, parse-completeness, duplicate/empty-chunk, approval, and vector gates in `backend/app/services/ingestion/validate.py`
+- [X] T044 [US3] Implement HNSW pgvector index creation in `backend/app/db/migrations/` and `backend/app/services/ingestion/publish.py`
+- [X] T045 [US3] Implement retrieval smoke questions and citation-resolution checks in `backend/app/services/ingestion/validate.py`
+- [X] T046 [US3] Implement transactional release activation and prior-release retirement in `backend/app/services/ingestion/publish.py`
+- [X] T047 [US3] Implement the preparation command in `backend/scripts/prepare_knowledge_base.py` with `--manifest`, `--release-label`, `--source-root`, `--dry-run`, and `--activate`, consuming the Gemini adapter from T039A for non-dry-run preparation
+- [X] T048 [US3] Add preparation metrics and release diagnostics in `backend/app/services/ingestion/`
 
 **Checkpoint**: A validated vector release can be audited, activated, rolled back, and used by retrieval without failed or superseded content.
 
@@ -142,23 +145,23 @@ description: "Phased implementation tasks for the Purdue policy chatbot and RAG 
 
 ### Tests
 
-- [ ] T049 [P] [US1] Add `/api/chat` contract tests in `backend/tests/contract/test_chat_api.py`
-- [ ] T050 [P] [US1] Add supported-question integration tests in `backend/tests/integration/test_supported_policy_questions.py`
-- [ ] T051 [P] [US1] Add frontend chat-flow tests in `frontend/tests/chat-flow.test.tsx`
+- [X] T049 [P] [US1] Add `/api/chat` contract tests in `backend/tests/contract/test_chat_api.py`
+- [X] T050 [P] [US1] Add supported-question integration tests in `backend/tests/integration/test_supported_policy_questions.py`
+- [X] T051 [P] [US1] Add frontend chat-flow tests in `frontend/tests/chat-flow.test.tsx`
 
 ### Implementation
 
-- [ ] T052 [US1] Implement chat schemas in `backend/app/schemas/chat.py` with non-empty `question` and `student_type` values `undergraduate`, `graduate`, or `unknown`
-- [ ] T053 [US1] Extend semantic retrieval in `backend/app/services/retrieval.py` with student type, term, campus, program, and policy-category filters
-- [ ] T054 [US1] Implement citation construction in `backend/app/services/citation.py` using source URL, title, snippet, structural path, and location
-- [ ] T055 [US1] Implement grounded answer generation in `backend/app/services/answering.py` using only retrieved approved context
-- [ ] T056 [US1] Implement targeted ambiguity detection and clarification prompts in `backend/app/services/answering.py`
-- [ ] T057 [US1] Implement `POST /api/chat` in `backend/app/api/routes/chat.py`, persisting questions, answers, and citations
-- [ ] T058 [US1] Implement `GET /api/sources` in `backend/app/api/routes/sources.py` for active approved sources
-- [ ] T059 [P] [US1] Build the React chat page and form in `frontend/src/pages/ChatPage.tsx` and `frontend/src/components/QuestionForm.tsx`
-- [ ] T060 [P] [US1] Build answer, citation, and clarification components in `frontend/src/components/AnswerCard.tsx`, `frontend/src/components/CitationList.tsx`, and `frontend/src/components/ClarificationPrompt.tsx`
-- [ ] T061 [US1] Connect the frontend API client and application rendering in `frontend/src/services/chatApi.ts` and `frontend/src/app/App.tsx`
-- [ ] T062 [US1] Register chat/source routes and public CORS in `backend/app/main.py`
+- [X] T052 [US1] Implement chat schemas in `backend/app/schemas/chat.py` with non-empty `question` and `student_type` values `undergraduate`, `graduate`, or `unknown`
+- [X] T053 [US1] Extend semantic retrieval in `backend/app/services/retrieval.py` with student type, term, campus, program, and policy-category filters
+- [X] T054 [US1] Implement citation construction in `backend/app/services/citation.py` using source URL, title, snippet, structural path, and location
+- [X] T055 [US1] Implement grounded answer generation in `backend/app/services/answering.py` using only retrieved approved context
+- [X] T056 [US1] Implement targeted ambiguity detection and clarification prompts in `backend/app/services/answering.py`
+- [X] T057 [US1] Implement `POST /api/chat` in `backend/app/api/routes/chat.py`, persisting questions, answers, and citations
+- [X] T058 [US1] Implement `GET /api/sources` in `backend/app/api/routes/sources.py` for active approved sources
+- [X] T059 [P] [US1] Build the React chat page and form in `frontend/src/pages/ChatPage.tsx` and `frontend/src/components/QuestionForm.tsx`
+- [X] T060 [P] [US1] Build answer, citation, and clarification components in `frontend/src/components/AnswerCard.tsx`, `frontend/src/components/CitationList.tsx`, and `frontend/src/components/ClarificationPrompt.tsx`
+- [X] T061 [US1] Connect the frontend API client and application rendering in `frontend/src/services/chatApi.ts` and `frontend/src/app/App.tsx`
+- [X] T062 [US1] Register chat/source routes and public CORS in `backend/app/main.py`
 
 **Checkpoint**: The MVP answers supported questions or asks for necessary context, with citations tied to the active vector release.
 
@@ -172,20 +175,20 @@ description: "Phased implementation tasks for the Purdue policy chatbot and RAG 
 
 ### Tests
 
-- [ ] T063 [P] [US2] Add safe-referral contract tests in `backend/tests/contract/test_safe_referral_contract.py`
-- [ ] T064 [P] [US2] Add unsupported, stale, conflict, and individualized-advice tests in `backend/tests/integration/test_safe_failure.py`
-- [ ] T065 [P] [US2] Add provider outage tests in `backend/tests/integration/test_provider_failures.py`
-- [ ] T066 [P] [US2] Add safe-referral UI tests in `frontend/tests/safe-referral.test.tsx`
+- [X] T063 [P] [US2] Add safe-referral contract tests in `backend/tests/contract/test_safe_referral_contract.py`
+- [X] T064 [P] [US2] Add unsupported, stale, conflict, and individualized-advice tests in `backend/tests/integration/test_safe_failure.py`
+- [X] T065 [P] [US2] Add provider outage tests in `backend/tests/integration/test_provider_failures.py`
+- [X] T066 [P] [US2] Add safe-referral UI tests in `frontend/tests/safe-referral.test.tsx`
 
 ### Implementation
 
-- [ ] T067 [P] [US2] Add safe-referral schema validation in `backend/app/schemas/review.py` and `backend/app/schemas/chat.py`
-- [ ] T068 [US2] Implement confidence, freshness, conflict, and individualized-advice checks in `backend/app/services/answering.py`
-- [ ] T069 [US2] Implement verified-office and official-directory referral selection in `backend/app/services/referral.py`
-- [ ] T070 [US2] Update `backend/app/api/routes/chat.py` to return clarification or safe-referral responses when checks fail
-- [ ] T071 [US2] Persist referral and grounding audit metadata in `backend/app/models/answer_log.py` and `backend/app/services/answering.py`
-- [ ] T072 [P] [US2] Add safe-referral UI states in `frontend/src/components/SafeReferralCard.tsx`
-- [ ] T073 [US2] Add structured grounding and provider-failure audit logs in `backend/app/core/logging.py` and `backend/app/services/answering.py`
+- [X] T067 [P] [US2] Add safe-referral schema validation in `backend/app/schemas/review.py` and `backend/app/schemas/chat.py`
+- [X] T068 [US2] Implement confidence, freshness, conflict, and individualized-advice checks in `backend/app/services/answering.py`
+- [X] T069 [US2] Implement verified-office and official-directory referral selection in `backend/app/services/referral.py`
+- [X] T070 [US2] Update `backend/app/api/routes/chat.py` to return clarification or safe-referral responses when checks fail
+- [X] T071 [US2] Persist referral and grounding audit metadata in `backend/app/models/answer_log.py` and `backend/app/services/answering.py`
+- [X] T072 [P] [US2] Add safe-referral UI states in `frontend/src/components/SafeReferralCard.tsx`
+- [X] T073 [US2] Add structured grounding and provider-failure audit logs in `backend/app/core/logging.py` and `backend/app/services/answering.py`
 
 **Checkpoint**: Unsupported or unreliable answers cannot bypass safe-failure behavior.
 

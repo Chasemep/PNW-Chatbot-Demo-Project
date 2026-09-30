@@ -1,0 +1,22 @@
+[
+  {
+    "source_key": "course-refund-withdrawal-schedule-2026",
+    "title": "Refund and Withdrawal Schedule",
+    "location": "pnw-refund-withdrawal-Schedule.html",
+    "source_type": "html",
+    "issuing_office": "Registrar",
+    "review_status": "approved",
+    "effective_date": "2026-01-01",
+    "reviewed_at": "2026-09-30T12:00:00Z"
+  },
+  {
+    "source_key": "student-handbook-2026",
+    "title": "Student Handbook",
+    "location": "Student Handbook.pdf",
+    "source_type": "pdf",
+    "issuing_office": "Registrar",
+    "review_status": "approved",
+    "effective_date": "2026-01-01",
+    "reviewed_at": "2026-09-30T12:00:00Z"
+  }
+]

@@ -18,7 +18,7 @@ Required:
 Optional:
 
 - `--source-root PATH`: Root for local files referenced by the manifest.
-- `--dry-run`: Parse and validate without embedding or activation.
+- `--dry-run`: Parse and validate without calling Gemini embeddings, writing vectors, or activating.
 - `--activate`: Publish after all required gates pass. Without this flag the
   release remains `validated` for review.
 
@@ -48,7 +48,7 @@ The command must:
    source locations in normalized chunks.
 5. Exclude failed, inaccessible, unapproved, superseded, or incomplete sources
    from authoritative retrieval and create review records.
-6. Generate vectors using the release's pinned embedding configuration.
+6. Generate vectors through the Google Gemini API free tier using the release's pinned embedding model and dimension.
 7. Validate metadata, parse results, chunk content, vector dimensions, and
    representative retrieval/citation behavior.
 8. Activate the release atomically only when all required gates pass.
@@ -60,9 +60,13 @@ Successful validation returns a report containing:
 - release ID and status
 - source counts by parsed, excluded, and failed status
 - chunk count and embedding model/dimension
+- embedding provider (`google-gemini`) and provider diagnostics, excluding credentials
 - validation checks and warnings
 - active release ID before and after the run
 
 Activation failure is non-success even if individual files parsed. The command
 must leave the previously active release unchanged and return a non-zero exit
 status with actionable diagnostics.
+
+Embedding-provider failure or free-tier quota exhaustion is also non-success;
+the command must not write partial vectors or activate the candidate release.

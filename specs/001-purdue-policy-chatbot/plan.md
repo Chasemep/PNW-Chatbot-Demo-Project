@@ -12,7 +12,7 @@ Build a student-facing Purdue Northwest policy chatbot and a controlled source-p
 
 **Language/Version**: Python 3.12 managed with `uv`, Node.js 20 LTS
 
-**Primary Dependencies**: `uv` for Python project and lockfile management, FastAPI, React, PostgreSQL, pgvector, Docker Compose, Pydantic, SQLAlchemy, HTML/PDF/DOCX parsing libraries, an embedding provider, Google Gemini API on its available free tier for answer generation, and a vector-retrieval layer for grounded answer generation
+**Primary Dependencies**: `uv` for Python project and lockfile management, FastAPI, React, PostgreSQL, pgvector, Docker Compose, Pydantic, SQLAlchemy, HTML/PDF/DOCX parsing libraries, the Google Gemini API free tier for pinned retrieval embeddings and answer generation, and a vector-retrieval layer for grounded answer generation
 
 **Storage**: PostgreSQL with pgvector extension for source manifests, immutable source versions, structure-aware chunks, embeddings, validation results, and active knowledge-base releases; local Docker volumes are sufficient for the first release
 
@@ -24,7 +24,7 @@ Build a student-facing Purdue Northwest policy chatbot and a controlled source-p
 
 **Performance Goals**: p95 answer latency under 5 seconds for standard student questions; a normal source refresh must validate and index a small-to-medium corpus without requiring downtime; knowledge-base activation must be atomic
 
-**Constraints**: Use `uv` rather than pip, Poetry, or an unmanaged virtual environment for all Python dependency installation and execution; commit `backend/pyproject.toml` and `backend/uv.lock`; use only approved Purdue Northwest sources; preserve source provenance and structural context; failed or unreviewed parses cannot be indexed as authoritative; stale versions must not remain active after replacement; embedding credentials remain server-side; safe fallback behavior is required; no sign-in requirement for public student access in the first release
+**Constraints**: Use `uv` rather than pip, Poetry, or an unmanaged virtual environment for all Python dependency installation and execution; commit `backend/pyproject.toml` and `backend/uv.lock`; use only approved Purdue Northwest sources; preserve source provenance and structural context; failed or unreviewed parses cannot be indexed as authoritative; stale versions must not remain active after replacement; Google Gemini free-tier embedding credentials remain server-side; the embedding model and dimension are pinned per release; quota or provider failures must stop preparation safely; safe fallback behavior is required; no sign-in requirement for public student access in the first release
 
 **Scale/Scope**: Small-to-medium public web app; tens of thousands of source chunks and question traffic manageable within one PostgreSQL + pgvector instance; refreshes are batch-oriented and initiated by an authorized operator or deployment job
 
@@ -68,6 +68,7 @@ backend/
 │   │   │   ├── normalize.py
 │   │   │   ├── chunk.py
 │   │   │   ├── embed.py
+│   │   │   ├── gemini_embed.py
 │   │   │   ├── validate.py
 │   │   │   └── publish.py
 │   │   ├── retrieval.py
@@ -151,8 +152,8 @@ The system is organized as a small three-part web application: a React frontend 
 - Source ingestion and parsing pipeline
   - Reads an explicit approved-source manifest containing canonical identity, source type, owner, effective/review dates, and supersession status.
   - Fetches or reads each source, computes a content hash, and parses HTML, PDF, and DOC/DOCX into ordered structural blocks for headings, paragraphs, tables, lists, sidebars, and callouts.
-  - Normalizes whitespace and table/list representations without discarding section context, then creates bounded chunks with stable source-location metadata and deterministic chunk IDs.
-  - Generates embeddings with a pinned model configuration, writes them to an isolated knowledge-base release, and builds the pgvector index after content validation.
+  - Normalizes whitespace and table/list representations without discarding section context, then creates bounded chunks with stable source-location metadata and deterministic chunk IDs. Oversized tables are split between complete rows with repeated heading/column context and continuation metadata; oversized individual rows are split only at safe cell boundaries or sent for review.
+  - Generates embeddings through the Google Gemini API free tier with a pinned model configuration, writes them to an isolated knowledge-base release, and builds the pgvector index after content validation.
   - Runs quality gates for parse completeness, empty/duplicate content, metadata validity, embedding dimensions, and source approval. Any failed or unreviewed item is excluded from the publishable release and recorded for review.
   - Publishes a release by switching one active-release pointer in a transaction; the previous release remains available for audit and rollback but is not used for current answers.
 
