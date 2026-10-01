@@ -18,5 +18,16 @@
     "review_status": "approved",
     "effective_date": "2026-01-01",
     "reviewed_at": "2026-09-30T12:00:00Z"
+  },
+  {
+    "source_key": "student-absence-policy-2026",
+    "title": "Student Absence Policy",
+    "location": "StudentAbsencePolicy.html",
+    "source_type": "html",
+    "issuing_office": "Office of The Dean Of Students",
+    "review_status": "approved",
+    "effective_date": "2026-01-01",
+    "reviewed_at": "2026-09-30T12:00:00Z"
   }
+  
 ]

@@ -1,18 +1,26 @@
 """Grounded answer generation through the server-side Gemini API."""
 
+import re
 from collections.abc import Sequence
+from time import sleep
 from typing import Any
 
 from google import genai
 
 from app.core.config import get_settings
-from app.models.base import ResponseType
+from app.models.base import ContentKind, ResponseType
 from app.models.source_chunk import SourceContentSegment
 from app.schemas.chat import ChatResponse
 
 
 class AnswerGenerationError(RuntimeError):
     """Raised when Gemini cannot produce a usable grounded answer."""
+
+
+_CONFLICT_TOPIC_MARKERS = ("deadline", "date", "requirement")
+_TABLE_ROW_PATTERN = re.compile(r"^(?P<date>.+?)\s*\|\s*(?P<label>.+)$")
+_GEMINI_ANSWER_MAX_RETRIES = 1
+_GEMINI_ANSWER_MAX_RETRY_DELAY_SECONDS = 40
 
 
 def detect_ambiguity(question: str, student_type: str) -> str | None:
@@ -26,6 +34,7 @@ def detect_ambiguity(question: str, student_type: str) -> str | None:
         return "Are you an undergraduate or graduate student?"
     return None
 
+
 def assess_answer_safety(
     question: str,
     chunks: Sequence[SourceContentSegment],
@@ -34,15 +43,41 @@ def assess_answer_safety(
 
     if not chunks:
         return "No approved source supports this question."
-    if len(chunks) > 1:
-        normalized = {chunk.content_text.strip().lower() for chunk in chunks}
-        if len(normalized) > 1 and any(
-            marker in question.lower() for marker in ("deadline", "date", "requirement")
-        ):
-            return (
-                "The approved sources contain potentially conflicting policy details."
-            )
+    if _has_conflicting_dates(question, chunks):
+        return "The approved sources contain potentially conflicting policy details."
     return None
+
+
+def _has_conflicting_dates(
+    question: str,
+    chunks: Sequence[SourceContentSegment],
+) -> bool:
+    """Flag only genuine date conflicts: the same labeled event with different dates."""
+
+    if not any(marker in question.lower() for marker in _CONFLICT_TOPIC_MARKERS):
+        return False
+
+    return _has_conflicting_table_rows(chunks)
+
+
+def _has_conflicting_table_rows(chunks: Sequence[SourceContentSegment]) -> bool:
+    """Flag table rows where the same labeled event has different dates."""
+
+    dates_by_label: dict[str, set[str]] = {}
+    for chunk in chunks:
+        if chunk.content_kind is not ContentKind.TABLE:
+            continue
+        for line in chunk.content_text.splitlines():
+            match = _TABLE_ROW_PATTERN.match(line.strip())
+            if not match:
+                continue
+            date_value = match.group("date").strip().lower()
+            label = match.group("label").strip().lower()
+            if not any(character.isdigit() for character in date_value):
+                continue
+            dates_by_label.setdefault(label, set()).add(date_value)
+
+    return any(len(values) > 1 for values in dates_by_label.values())
 
 
 class GeminiAnswerer:
@@ -54,6 +89,7 @@ class GeminiAnswerer:
         if not model_name.strip():
             raise ValueError("Gemini answer model must not be blank")
         self._model_name = model_name
+        self._api_key = api_key
         self._client = client or genai.Client(api_key=api_key)
 
     @classmethod
@@ -83,17 +119,50 @@ class GeminiAnswerer:
             "Approved context:\n"
             + "\n\n".join(context)
         )
-        try:
-            response = self._client.models.generate_content(
-                model=self._model_name,
-                contents=prompt,
-            )
-        except Exception as error:
-            raise AnswerGenerationError("Gemini answer request failed") from error
+        response = self._generate_content(prompt)
         text = getattr(response, "text", None)
         if not isinstance(text, str) or not text.strip():
             raise AnswerGenerationError("Gemini returned an empty answer")
         return text.strip()
+
+    def _generate_content(self, prompt: str) -> Any:
+        for attempt in range(_GEMINI_ANSWER_MAX_RETRIES + 1):
+            try:
+                return self._client.models.generate_content(
+                    model=self._model_name,
+                    contents=prompt,
+                )
+            except Exception as error:
+                error_details = str(error)
+                error_code = getattr(error, "code", None)
+                retry_after = _retry_after_seconds(error_details)
+                is_rate_limited = (
+                    error_code == 429
+                    or "RESOURCE_EXHAUSTED" in error_details
+                    or "quota exceeded" in error_details.lower()
+                )
+                if (
+                    is_rate_limited
+                    and retry_after is not None
+                    and retry_after <= _GEMINI_ANSWER_MAX_RETRY_DELAY_SECONDS
+                    and attempt < _GEMINI_ANSWER_MAX_RETRIES
+                ):
+                    sleep(retry_after + 1)
+                    continue
+
+                error_details = error_details.replace(self._api_key, "[REDACTED]")
+                raise AnswerGenerationError(
+                    "Gemini answer request failed "
+                    f"(code={error_code}): {error_details[:500]}"
+                ) from error
+        raise AnswerGenerationError("Gemini answer request failed after retries")
+
+
+def _retry_after_seconds(error_details: str) -> float | None:
+    """Extract Gemini's textual retry hint for quota/rate-limit responses."""
+
+    match = re.search(r"retry in ([0-9]+(?:\.[0-9]+)?)s", error_details, re.IGNORECASE)
+    return float(match.group(1)) if match else None
 
 
 def build_grounded_response(

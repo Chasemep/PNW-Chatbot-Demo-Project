@@ -1,5 +1,6 @@
 """Google Gemini embedding provider for source and query vectors."""
 
+import re
 from collections.abc import Sequence
 from numbers import Real
 from time import sleep
@@ -10,7 +11,8 @@ from google import genai
 from app.core.config import get_settings
 
 GEMINI_BATCH_SIZE = 25
-GEMINI_BATCH_INTERVAL_SECONDS = 12
+GEMINI_BATCH_INTERVAL_SECONDS = 16
+GEMINI_MAX_RETRIES = 4
 
 
 class GeminiEmbeddingError(RuntimeError):
@@ -37,6 +39,7 @@ class GeminiEmbeddingProvider:
 
         self._model_name = model_name
         self._dimension = dimension
+        self._api_key = api_key
         self._client = client or genai.Client(api_key=api_key)
 
     @classmethod
@@ -74,16 +77,7 @@ class GeminiEmbeddingProvider:
             if start:
                 sleep(GEMINI_BATCH_INTERVAL_SECONDS)
             batch = texts[start : start + GEMINI_BATCH_SIZE]
-            try:
-                response = self._client.models.embed_content(
-                    model=self._model_name,
-                    contents=batch,
-                    config={"output_dimensionality": self._dimension},
-                )
-            except Exception as error:
-                raise GeminiEmbeddingError(
-                    "Gemini embedding request failed; check API key, model, and quota"
-                ) from error
+            response = self._embed_batch(batch)
 
             embeddings = response.embeddings
             if embeddings is None or len(embeddings) != len(batch):
@@ -97,3 +91,39 @@ class GeminiEmbeddingProvider:
                 )
             vectors.extend(batch_vectors)  # type: ignore[arg-type]
         return vectors
+
+    def _embed_batch(self, batch: list[str]) -> Any:
+        for attempt in range(GEMINI_MAX_RETRIES + 1):
+            try:
+                return self._client.models.embed_content(
+                    model=self._model_name,
+                    contents=batch,
+                    config={"output_dimensionality": self._dimension},
+                )
+            except Exception as error:
+                error_details = str(error)
+                error_code = getattr(error, "code", None)
+                retry_after = _retry_after_seconds(error_details)
+                is_rate_limited = (
+                    error_code == 429 or "RESOURCE_EXHAUSTED" in error_details
+                )
+                if (
+                    is_rate_limited
+                    and retry_after is not None
+                    and attempt < GEMINI_MAX_RETRIES
+                ):
+                    sleep(retry_after + 1)
+                    continue
+
+                error_details = error_details.replace(self._api_key, "[REDACTED]")
+                raise GeminiEmbeddingError(
+                    "Gemini embedding request failed "
+                    f"(code={error_code}): {error_details[:500]}"
+                ) from error
+
+
+def _retry_after_seconds(error_details: str) -> float | None:
+    """Extract Gemini's textual retry hint for quota/rate-limit responses."""
+
+    match = re.search(r"retry in ([0-9]+(?:\.[0-9]+)?)s", error_details)
+    return float(match.group(1)) if match else None
