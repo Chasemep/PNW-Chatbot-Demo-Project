@@ -3,7 +3,7 @@ import { useState } from "react";
 import { AnswerCard } from "../components/AnswerCard";
 import { CitationList } from "../components/CitationList";
 import { ClarificationPrompt } from "../components/ClarificationPrompt";
-import { SafeReferralCard } from "../components/SafeReferralCard";
+import { ContactReferral } from "../components/ContactReferral";
 import { ChatRequest, QuestionForm } from "../components/QuestionForm";
 import { ChatResponse, postChatQuestion } from "../services/chatApi";
 import "../styles/chat.css";
@@ -59,13 +59,14 @@ export function ChatPage() {
             <AnswerCard
               answer={response.answer}
               responseType={response.response_type}
-              referral={response.referral}
             />
             {response.referral && (
-              <SafeReferralCard
+              <ContactReferral
                 officeName={response.referral.office_name}
                 reason={response.referral.referral_reason}
                 contactUrl={response.referral.contact_url}
+                contactEmail={response.referral.contact_email}
+                contactPhone={response.referral.contact_phone}
               />
             )}
             {response.clarification_prompt && (

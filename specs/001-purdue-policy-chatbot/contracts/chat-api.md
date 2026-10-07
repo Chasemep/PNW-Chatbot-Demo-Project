@@ -51,6 +51,8 @@ Referral object:
 | `office_name` | string | Yes | Responsible Purdue Northwest office |
 | `referral_reason` | string | Yes | Reason for the referral |
 | `contact_url` | string | No | Verified contact or directory URL |
+| `contact_email` | string | No | Email address explicitly listed in an approved source |
+| `contact_phone` | string | No | Phone number explicitly listed in an approved source |
 
 ## `GET /api/sources`
 

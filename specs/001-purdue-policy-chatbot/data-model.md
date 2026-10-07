@@ -12,7 +12,7 @@ The system stores approved university source content, immutable source versions,
 |---|---|---|
 | id | UUID | Primary key |
 | title | string | Official document or page title |
-| source_url | string | Canonical URL or document path |
+| source_url | string | Canonical public URL used for citations |
 | source_type | enum | html, pdf, docx, webpage |
 | issuing_office | string | Responsible university office or department |
 | publication_date | date | Publish or effective date as available |
@@ -24,7 +24,7 @@ The system stores approved university source content, immutable source versions,
 | updated_at | timestamp | Last metadata update |
 
 **Validation rules**:
-- `source_url` must be present for web pages and documents loaded from a known URL.
+- `source_url` must be an absolute HTTP(S) URL for web pages and documents loaded from local paths; remote `location` values may supply it by default.
 - `review_status` cannot be `approved` if `is_active = false`.
 - `superseded_by` is required when `review_status = superseded`.
 

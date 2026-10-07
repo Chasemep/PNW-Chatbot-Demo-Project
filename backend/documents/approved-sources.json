@@ -3,6 +3,7 @@
     "source_key": "course-refund-withdrawal-schedule-2026",
     "title": "Refund and Withdrawal Schedule",
     "location": "pnw-refund-withdrawal-Schedule.html",
+    "source_url": "https://www.pnw.edu/registrar/academic-schedule/refund-withdrawal-schedule/",
     "source_type": "html",
     "issuing_office": "Registrar",
     "review_status": "approved",
@@ -13,6 +14,7 @@
     "source_key": "student-handbook-2026",
     "title": "Student Handbook",
     "location": "Student Handbook.pdf",
+    "source_url": "https://www.pnw.edu/dean-of-students/student-handbook/",
     "source_type": "pdf",
     "issuing_office": "Registrar",
     "review_status": "approved",
@@ -23,11 +25,11 @@
     "source_key": "student-absence-policy-2026",
     "title": "Student Absence Policy",
     "location": "StudentAbsencePolicy.html",
+    "source_url": "https://www.pnw.edu/dean-of-students/policies/student-absence-policy/",
     "source_type": "html",
     "issuing_office": "Office of The Dean Of Students",
     "review_status": "approved",
     "effective_date": "2026-01-01",
     "reviewed_at": "2026-09-30T12:00:00Z"
   }
-  
 ]

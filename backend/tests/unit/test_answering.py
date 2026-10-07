@@ -2,10 +2,12 @@ from uuid import uuid4
 
 from app.models.base import ContentKind
 from app.models.source_chunk import SourceContentSegment
+from app.schemas.chat import CitationResponse
 from app.services.answering import (
     AnswerGenerationError,
     GeminiAnswerer,
     assess_answer_safety,
+    build_grounded_response,
 )
 
 
@@ -71,6 +73,23 @@ def test_questions_without_conflict_markers_are_not_checked_for_date_conflicts()
     ]
 
     assert assess_answer_safety("Who do I contact about registration?", chunks) is None
+
+
+def test_individualized_decision_requests_fail_safely_even_with_retrieved_chunks():
+    approved_context = [
+        chunk(
+            content_text="Students may request exceptions through the Registrar.",
+            structural_path="Registration > Exceptions",
+        )
+    ]
+
+    reason = assess_answer_safety(
+        "Can I receive a personal policy exception?",
+        approved_context,
+    )
+
+    assert reason is not None
+    assert "individualized" in reason.lower()
 
 
 def test_table_rows_for_distinct_events_are_not_flagged_as_conflicting():
@@ -168,3 +187,21 @@ def test_answerer_does_not_wait_past_the_request_retry_budget(monkeypatch):
         raise AssertionError("long quota waits must fail promptly")
 
     assert pauses == []
+
+
+def test_model_refusal_cannot_be_returned_as_a_grounded_direct_answer():
+    citation = CitationResponse(
+        source_id=uuid4(),
+        source_url="https://www.pnw.edu/",
+        citation_text="Approved excerpt",
+    )
+
+    try:
+        build_grounded_response(
+            answer="I cannot provide a reliable answer from the available context.",
+            citations=[citation],
+        )
+    except AnswerGenerationError as error:
+        assert "reliable answer" in str(error).lower()
+    else:
+        raise AssertionError("a model refusal must not be labeled direct_answer")

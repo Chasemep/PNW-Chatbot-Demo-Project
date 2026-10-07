@@ -1,7 +1,11 @@
 """Student chat API route."""
 
+import logging
+from uuid import UUID
+
 from fastapi import APIRouter
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.api.deps import DatabaseSession
 from app.core.logging import log_grounding_event
@@ -21,10 +25,11 @@ from app.services.answering import (
     assess_answer_safety,
     build_grounded_response,
     detect_ambiguity,
+    is_contact_question,
 )
 from app.services.citation import build_citations
 from app.services.ingestion.gemini_embed import GeminiEmbeddingProvider
-from app.services.referral import select_verified_referral
+from app.services.referral import build_contact_referral, select_verified_referral
 from app.services.retrieval import retrieve_active_chunks
 
 router = APIRouter(prefix="/api", tags=["chat"])
@@ -59,7 +64,17 @@ def chat(request: ChatRequest, database: DatabaseSession) -> ChatResponse:
         return response
 
     chunks = _retrieve_chunks(database, request)
+    contact_question = is_contact_question(request.question)
+    contact_referral = (
+        build_contact_referral(request.question, chunks) if contact_question else None
+    )
     safety_reason = assess_answer_safety(request.question, chunks)
+    if contact_question and contact_referral is None:
+        safety_reason = (
+            "I cannot verify current contact details from approved sources. "
+            "Use the official Purdue Northwest directory to locate the "
+            "appropriate office."
+        )
     if safety_reason:
         response = _safe_referral_response(
             safety_reason,
@@ -88,8 +103,13 @@ def chat(request: ChatRequest, database: DatabaseSession) -> ChatResponse:
             request.question,
             [chunk.content_text for chunk in chunks],
         )
-        response = build_grounded_response(answer=answer, citations=citations)
-    except (AnswerGenerationError, ValueError):
+        response = build_grounded_response(
+            answer=answer,
+            citations=citations,
+            referral=contact_referral,
+        )
+    except (AnswerGenerationError, ValueError) as error:
+        logging.getLogger("purdue.grounding").error("answer_failed: %s", error)
         response = _safe_referral_response(
             "I could not verify a reliable answer right now. Please contact the "
             "responsible university office.",
@@ -106,11 +126,17 @@ def chat(request: ChatRequest, database: DatabaseSession) -> ChatResponse:
     return response
 
 
-def _retrieve_chunks(database, request: ChatRequest) -> list[SourceContentSegment]:
+def _retrieve_chunks(
+    database: Session,
+    request: ChatRequest,
+) -> list[SourceContentSegment]:
     try:
-        query_vector = GeminiEmbeddingProvider.from_settings().embed(
-            [request.question]
-        )[0]
+        query_vector = [
+            float(value)
+            for value in GeminiEmbeddingProvider.from_settings().embed(
+                [request.question]
+            )[0]
+        ]
     except Exception:
         query_vector = None
     return retrieve_active_chunks(
@@ -129,11 +155,11 @@ def _safe_referral_response(reason: str, question: str) -> ChatResponse:
 
 
 def _persist_answer(
-    database,
-    question_id,
+    database: Session,
+    question_id: UUID,
     response: ChatResponse,
     chunks: list[SourceContentSegment] | None = None,
-    sources: dict | None = None,
+    sources: dict[UUID, ApprovedSource] | None = None,
 ) -> None:
     answer = GroundedAnswer(
         question_id=question_id,

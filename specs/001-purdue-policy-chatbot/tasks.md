@@ -200,13 +200,13 @@ description: "Phased implementation tasks for the Purdue policy chatbot and RAG 
 
 **Independent Test**: Ask who to contact for registration, financial aid, academic standing, grade appeals, and class changes; verify current contact data or an official directory fallback.
 
-- [ ] T074 [P] [US4] Add contact referral tests in `backend/tests/integration/test_contact_referrals.py`
-- [ ] T075 [P] [US4] Add unavailable-contact tests in `backend/tests/integration/test_unverified_contacts.py`
-- [ ] T076 [P] [US4] Add contact UI tests in `frontend/tests/contact-referral.test.tsx`
-- [ ] T077 [US4] Implement contact metadata extraction in `backend/app/services/referral.py`
-- [ ] T078 [US4] Implement process-to-office matching in `backend/app/services/referral.py`
-- [ ] T079 [US4] Add contact referrals to chat responses in `backend/app/api/routes/chat.py` and `backend/app/services/answering.py`
-- [ ] T080 [US4] Render contact and directory fallback details in `frontend/src/components/ContactReferral.tsx`
+- [X] T074 [P] [US4] Add contact referral tests in `backend/tests/integration/test_contact_referrals.py`
+- [X] T075 [P] [US4] Add unavailable-contact tests in `backend/tests/integration/test_unverified_contacts.py`
+- [X] T076 [P] [US4] Add contact UI tests in `frontend/tests/contact-referral.test.tsx`
+- [X] T077 [US4] Implement contact metadata extraction in `backend/app/services/referral.py`
+- [X] T078 [US4] Implement process-to-office matching in `backend/app/services/referral.py`
+- [X] T079 [US4] Add contact referrals to chat responses in `backend/app/api/routes/chat.py` and `backend/app/services/answering.py`
+- [X] T080 [US4] Render contact and directory fallback details in `frontend/src/components/ContactReferral.tsx`
 
 **Checkpoint**: Contact answers remain grounded in active approved sources and never invent unavailable details.
 
@@ -216,13 +216,13 @@ description: "Phased implementation tasks for the Purdue policy chatbot and RAG 
 
 **Purpose**: Validate the complete implementation against the quickstart, success criteria, and constitution.
 
-- [ ] T081 [P] Add Docker end-to-end smoke tests in `backend/tests/integration/test_quickstart_flow.py`
-- [ ] T082 [P] Add latency and preparation performance tests in `backend/tests/integration/test_performance.py`, executed with `uv run pytest`
-- [ ] T083 [P] Add evaluation datasets and scoring scripts for SC-001 through SC-008 in `backend/tests/evaluation/`
-- [ ] T084 [P] Document operator setup and knowledge-base preparation in `README.md` and `docs/knowledge-base-preparation.md`
-- [ ] T085 Review `frontend/src/`, `backend/app/core/`, and `docker/` for credential exposure and unintended sign-in requirements
-- [ ] T086 Run every scenario in `specs/001-purdue-policy-chatbot/quickstart.md` and record release validation results
-- [ ] T087 Perform final traceability and constitution review across `specs/001-purdue-policy-chatbot/` and implemented source paths
+- [X] T081 [P] Add Docker end-to-end smoke tests in `backend/tests/integration/test_quickstart_flow.py`
+- [X] T082 [P] Add latency and preparation performance tests in `backend/tests/integration/test_performance.py`, executed with `uv run pytest`
+- [X] T083 [P] Add evaluation datasets and scoring scripts for SC-001 through SC-008 in `backend/tests/evaluation/`
+- [X] T084 [P] Document operator setup and knowledge-base preparation in `README.md` and `docs/knowledge-base-preparation.md`
+- [X] T085 Review `frontend/src/`, `backend/app/core/`, and `docker/` for credential exposure and unintended sign-in requirements
+- [X] T086 Run every scenario in `specs/001-purdue-policy-chatbot/quickstart.md` and record release validation results
+- [X] T087 Perform final traceability and constitution review across `specs/001-purdue-policy-chatbot/` and implemented source paths
 
 ---
 

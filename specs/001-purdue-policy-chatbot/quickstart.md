@@ -13,11 +13,13 @@
 ## Local setup
 
 ```bash
-cd backend
-uv sync
-cd ..
+cp .env.example .env
 docker compose --file docker/docker-compose.yml up --build
 ```
+
+Set the real Gemini credentials in the untracked root `.env` before starting
+the backend. The Compose file builds the backend with `backend/documents/`
+inside the image; do not use a host-only `/data` path for its manifest.
 
 The backend is a `uv` project. Install dependencies with `uv sync` and run
 backend commands with `uv run`; do not use `pip install`, a separate
@@ -40,9 +42,14 @@ URLs:
 ```bash
 docker compose --file docker/docker-compose.yml run --rm backend \
   uv run python scripts/prepare_knowledge_base.py \
-  --manifest /data/approved-sources.json \
-  --release-label local-validation
+  --manifest documents/approved-sources.json \
+  --source-root documents/sources \
+  --release-label local-validation \
+  --dry-run
 ```
+
+Remove `--dry-run` and add `--activate` only when ready to create and publish a
+database release. A dry run never writes to PostgreSQL or requests embeddings.
 
 The command must:
 

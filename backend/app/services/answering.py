@@ -10,7 +10,7 @@ from google import genai
 from app.core.config import get_settings
 from app.models.base import ContentKind, ResponseType
 from app.models.source_chunk import SourceContentSegment
-from app.schemas.chat import ChatResponse
+from app.schemas.chat import ChatResponse, CitationResponse, ReferralResponse
 
 
 class AnswerGenerationError(RuntimeError):
@@ -19,8 +19,36 @@ class AnswerGenerationError(RuntimeError):
 
 _CONFLICT_TOPIC_MARKERS = ("deadline", "date", "requirement")
 _TABLE_ROW_PATTERN = re.compile(r"^(?P<date>.+?)\s*\|\s*(?P<label>.+)$")
-_GEMINI_ANSWER_MAX_RETRIES = 1
+_INDIVIDUALIZED_QUESTION_PATTERN = re.compile(
+    r"\b(?:my|me|i am|i'm|will i|can i|do i|am i)\b.{0,100}"
+    r"\b(?:eligible|qualify|exception|circumstances|situation|case|"
+    r"forgive|waive|appeal|my tuition)\b",
+    re.IGNORECASE,
+)
+_GEMINI_ANSWER_MAX_RETRIES = 3
+_GEMINI_UNAVAILABLE_BACKOFF_SECONDS = 2
 _GEMINI_ANSWER_MAX_RETRY_DELAY_SECONDS = 40
+_CONTACT_QUESTION_MARKERS = (
+    "contact",
+    "who can help",
+    "who handles",
+    "where can i get help",
+)
+_ANSWER_REFUSAL_MARKERS = (
+    "cannot provide a reliable answer",
+    "cannot provide reliable information",
+    "cannot answer reliably",
+    "cannot verify this information",
+    "can't provide a reliable answer",
+    "unable to provide a reliable answer",
+)
+
+
+def is_contact_question(question: str) -> bool:
+    """Identify requests for an office or contact rather than policy guidance."""
+
+    normalized = question.casefold()
+    return any(marker in normalized for marker in _CONTACT_QUESTION_MARKERS)
 
 
 def detect_ambiguity(question: str, student_type: str) -> str | None:
@@ -43,6 +71,11 @@ def assess_answer_safety(
 
     if not chunks:
         return "No approved source supports this question."
+    if _INDIVIDUALIZED_QUESTION_PATTERN.search(question):
+        return (
+            "I cannot make an individualized decision. Contact the responsible "
+            "university office for case-specific guidance."
+        )
     if _has_conflicting_dates(question, chunks):
         return "The approved sources contain potentially conflicting policy details."
     return None
@@ -141,6 +174,14 @@ class GeminiAnswerer:
                     or "RESOURCE_EXHAUSTED" in error_details
                     or "quota exceeded" in error_details.lower()
                 )
+                is_unavailable = (
+                    error_code in (500, 503)
+                    or "UNAVAILABLE" in error_details
+                    or "overloaded" in error_details.lower()
+                )
+                if is_unavailable and attempt < _GEMINI_ANSWER_MAX_RETRIES:
+                    sleep(_GEMINI_UNAVAILABLE_BACKOFF_SECONDS * (attempt + 1))
+                    continue
                 if (
                     is_rate_limited
                     and retry_after is not None
@@ -168,14 +209,19 @@ def _retry_after_seconds(error_details: str) -> float | None:
 def build_grounded_response(
     *,
     answer: str,
-    citations,
+    citations: list[CitationResponse],
+    referral: ReferralResponse | None = None,
 ) -> ChatResponse:
-    """Create a direct response only when citations exist."""
+    """Create a direct response only when citations exist and the model answered."""
 
     if not citations:
         raise AnswerGenerationError("grounded answers require citations")
+    normalized_answer = answer.casefold()
+    if any(marker in normalized_answer for marker in _ANSWER_REFUSAL_MARKERS):
+        raise AnswerGenerationError("model could not provide a reliable answer")
     return ChatResponse(
         answer=answer,
         response_type=ResponseType.DIRECT_ANSWER,
         citations=citations,
+        referral=referral,
     )

@@ -28,7 +28,8 @@ Each manifest source must provide:
 {
   "source_key": "registration-calendar-2026",
   "title": "Registration Calendar",
-  "location": "https://example.purdue.edu/registration/calendar",
+   "location": "registration-calendar.html",
+   "source_url": "https://example.purdue.edu/registration/calendar",
   "source_type": "html",
   "issuing_office": "Registrar",
   "review_status": "approved",
@@ -36,6 +37,12 @@ Each manifest source must provide:
   "reviewed_at": "2026-09-01"
 }
 ```
+
+`location` is the URL or local path used to fetch/read content during
+preparation. `source_url` is the absolute HTTP(S) URL shown to students for
+citations. It is optional when `location` is already an HTTP(S) URL, in which
+case `location` is also used as the citation URL. Local file locations require
+an explicit `source_url`.
 
 ## Processing contract
 

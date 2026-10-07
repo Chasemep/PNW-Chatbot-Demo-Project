@@ -28,6 +28,31 @@ def test_manifest_accepts_complete_approved_source_metadata():
     assert sources[0].reviewed_at.isoformat() == "2026-09-01T00:00:00+00:00"
 
 
+def test_manifest_requires_canonical_url_for_local_source_file():
+    with pytest.raises(ValueError, match="source_url"):
+        validate_manifest([valid_source(location="StudentAbsencePolicy.html")])
+
+
+def test_manifest_accepts_canonical_url_for_local_source_file():
+    sources = validate_manifest(
+        [
+            valid_source(
+                location="StudentAbsencePolicy.html",
+                source_url="https://www.pnw.edu/dean-of-students/policies/student-absence-policy/",
+            )
+        ]
+    )
+
+    assert sources[0].source_url == (
+        "https://www.pnw.edu/dean-of-students/policies/student-absence-policy/"
+    )
+
+
+def test_manifest_rejects_non_http_citation_url():
+    with pytest.raises(ValueError, match="source_url"):
+        validate_manifest([valid_source(source_url="StudentAbsencePolicy.html")])
+
+
 @pytest.mark.parametrize(
     "field",
     [
@@ -55,6 +80,7 @@ def test_manifest_requires_each_source_metadata_field(field):
         ("source_key", "   "),
         ("title", "   "),
         ("location", "   "),
+        ("source_url", "   "),
         ("issuing_office", "   "),
         ("source_type", "text"),
         ("review_status", "unverified"),

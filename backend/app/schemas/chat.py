@@ -54,11 +54,16 @@ class ReferralResponse(BaseModel):
     office_name: str = Field(min_length=1)
     referral_reason: str = Field(min_length=1)
     contact_url: str | None = Field(default=None, min_length=1)
+    contact_email: str | None = Field(default=None, min_length=1)
+    contact_phone: str | None = Field(default=None, min_length=1)
 
     _validate_text = field_validator("office_name", "referral_reason")(
         require_response_text
     )
     _validate_contact_url = field_validator("contact_url")(
+        lambda value: require_response_text(value) if value is not None else value
+    )
+    _validate_contact_details = field_validator("contact_email", "contact_phone")(
         lambda value: require_response_text(value) if value is not None else value
     )
 

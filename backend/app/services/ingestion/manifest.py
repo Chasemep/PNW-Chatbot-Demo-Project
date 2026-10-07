@@ -2,8 +2,16 @@
 
 from datetime import date, datetime
 from typing import Any
+from urllib.parse import urlparse
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    field_validator,
+    model_validator,
+)
 
 from app.models.base import ReviewStatus, SourceType
 
@@ -16,20 +24,42 @@ class ManifestSource(BaseModel):
     source_key: str = Field(min_length=1, max_length=255)
     title: str = Field(min_length=1, max_length=500)
     location: str = Field(min_length=1)
+    source_url: str | None = Field(default=None, min_length=1)
     source_type: SourceType
     issuing_office: str = Field(min_length=1, max_length=255)
     review_status: ReviewStatus
     effective_date: date
     reviewed_at: datetime
 
-    @field_validator("source_key", "title", "location", "issuing_office")
+    @field_validator("source_key", "title", "location", "source_url", "issuing_office")
     @classmethod
-    def require_text(cls, value: str) -> str:
+    def require_text(cls, value: str | None) -> str | None:
         """Reject blank identifiers and source metadata."""
 
-        if not value:
+        if value is not None and not value:
             raise ValueError("value must not be blank")
         return value
+
+    @field_validator("source_url")
+    @classmethod
+    def require_http_source_url(cls, value: str | None) -> str | None:
+        """Ensure browser-facing citation URLs use HTTP(S)."""
+
+        if value is None:
+            return None
+        parsed_url = urlparse(value)
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            raise ValueError("source_url must be an absolute HTTP(S) URL")
+        return value
+
+    @model_validator(mode="after")
+    def require_canonical_url_for_local_source(self) -> "ManifestSource":
+        """Require a public citation target when ingestion reads a local file."""
+
+        parsed_location = urlparse(self.location)
+        if parsed_location.scheme not in {"http", "https"} and self.source_url is None:
+            raise ValueError("source_url is required when location is a local file")
+        return self
 
     @field_validator("reviewed_at")
     @classmethod

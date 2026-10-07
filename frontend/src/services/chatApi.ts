@@ -8,16 +8,20 @@ export type ChatRequest = {
   student_type: StudentType;
 };
 
+export type ContactReferral = {
+  office_name: string;
+  referral_reason: string;
+  contact_url?: string;
+  contact_email?: string;
+  contact_phone?: string;
+};
+
 export type ChatResponse = {
   answer: string;
   response_type: ResponseType;
   citations?: Citation[];
   clarification_prompt?: string;
-  referral?: {
-    office_name: string;
-    referral_reason: string;
-    contact_url?: string;
-  };
+  referral?: ContactReferral;
 };
 
 export async function postChatQuestion(request: ChatRequest): Promise<ChatResponse> {

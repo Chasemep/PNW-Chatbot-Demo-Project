@@ -207,7 +207,7 @@ def prepare_knowledge_base(
             for source in manifest:
                 stored_source = ApprovedSource(
                     title=source.title,
-                    source_url=source.location,
+                    source_url=source.source_url or source.location,
                     source_type=source.source_type,
                     issuing_office=source.issuing_office,
                     publication_date=source.effective_date,

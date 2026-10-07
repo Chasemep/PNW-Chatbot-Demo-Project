@@ -79,6 +79,7 @@ def register_error_handlers(app: FastAPI) -> None:
             "Unhandled request error type=%s path=%s",
             type(error).__name__,
             request.url.path,
+            exc_info=error,
         )
         return _error_response(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
